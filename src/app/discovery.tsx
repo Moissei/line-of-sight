@@ -86,11 +86,17 @@ export default function DiscoveryScreen() {
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
       <View style={[styles.content, { paddingVertical: spacing }]}>
+        <View style={styles.topControls}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Incoming connection requests" disabled={busy}
+          onPress={() => router.push('/requests')} style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
+          <Text style={styles.profileLabel}>REQUESTS</Text>
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Edit profile" disabled={busy}
           onPress={() => router.push('/edit-profile')}
           style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
           <Text style={styles.profileLabel}>PROFILE</Text>
         </Pressable>
+        </View>
         <Text
           accessibilityRole="header"
           numberOfLines={1}
@@ -158,6 +164,7 @@ export default function DiscoveryScreen() {
 }
 
 const styles = StyleSheet.create({
+  topControls: { flexDirection: 'row', justifyContent: 'space-between', flexShrink: 0 },
   profileControl: { alignSelf: 'flex-end', flexShrink: 0, minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
   profileLabel: { color: '#253D2F', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
