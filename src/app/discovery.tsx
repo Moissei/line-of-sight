@@ -55,6 +55,7 @@ export default function DiscoveryScreen() {
     stopPolling.current = stop;
     return () => {
       stop();
+      setNearby(null);
       if (stopPolling.current === stop) stopPolling.current = null;
     };
   }, [isLooking, busy, presenceReady]));
@@ -157,7 +158,7 @@ export default function DiscoveryScreen() {
 }
 
 const styles = StyleSheet.create({
-  profileControl: { alignSelf: 'flex-end', minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
+  profileControl: { alignSelf: 'flex-end', flexShrink: 0, minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
   profileLabel: { color: '#253D2F', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
   content: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center', paddingHorizontal: 28 },

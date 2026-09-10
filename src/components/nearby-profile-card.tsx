@@ -1,14 +1,26 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useState } from 'react';
 import type { NearbyProfile } from '@/lib/nearby-discovery';
+import { RequestToConnect } from './request-to-connect';
+
+function PrimaryPhoto({ uri }: { uri?: string }) {
+  const [failed, setFailed] = useState(false);
+  return <View style={styles.photo}>
+    <View style={styles.avatar} accessible={false}>
+      <View style={styles.avatarHead} /><View style={styles.avatarShoulders} />
+    </View>
+    {!!uri && !failed && <Image source={{ uri }} style={StyleSheet.absoluteFill}
+      contentFit="cover" cachePolicy="none" accessibilityLabel="Primary profile photo"
+      onError={() => setFailed(true)} />}
+  </View>;
+}
 
 export function NearbyProfileCard({ profile }: { profile: NearbyProfile }) {
   return (
     <View style={styles.card}>
+      <PrimaryPhoto key={profile.primaryPhotoUrl ?? 'placeholder'} uri={profile.primaryPhotoUrl} />
       <View style={styles.header}>
-        <View style={styles.avatar} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <View style={styles.avatarHead} />
-          <View style={styles.avatarShoulders} />
-        </View>
         <View style={styles.identity}>
           <Text style={styles.name}>{profile.first_name}{profile.age !== null ? `, ${profile.age}` : ''}</Text>
           {!!profile.gender?.trim() && <Text style={styles.secondary}>{profile.gender}</Text>}
@@ -23,11 +35,13 @@ export function NearbyProfileCard({ profile }: { profile: NearbyProfile }) {
         </View>
       )}
       {__DEV__ && <Text style={styles.distance}>{profile.distance_meters} m away</Text>}
+      <RequestToConnect key={profile.user_id} targetUserId={profile.user_id} revision={profile.requestRevision ?? 0} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  photo: { width: '100%', aspectRatio: 1.4, borderRadius: 12, overflow: 'hidden', backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center' },
   card: { width: '100%', borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 16, padding: 18, gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 3, flexShrink: 0 },
