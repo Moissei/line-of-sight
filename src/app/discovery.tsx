@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -9,6 +9,7 @@ import { NearbyResult, pollNearbyDiscovery } from '@/lib/nearby-discovery';
 import { NearbyProfileCard } from '@/components/nearby-profile-card';
 
 export default function DiscoveryScreen() {
+  const router = useRouter();
   // Only the START LOOKING press may create/reactivate a session.
   // Never derive discoverability from installation, onboarding, or profile intentions.
   const [isLooking, setIsLooking] = useState(false);
@@ -84,6 +85,11 @@ export default function DiscoveryScreen() {
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
       <View style={[styles.content, { paddingVertical: spacing }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Edit profile" disabled={busy}
+          onPress={() => router.push('/edit-profile')}
+          style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
+          <Text style={styles.profileLabel}>PROFILE</Text>
+        </Pressable>
         <Text
           accessibilityRole="header"
           numberOfLines={1}
@@ -151,6 +157,8 @@ export default function DiscoveryScreen() {
 }
 
 const styles = StyleSheet.create({
+  profileControl: { alignSelf: 'flex-end', minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
+  profileLabel: { color: '#253D2F', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
   content: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center', paddingHorizontal: 28 },
   title: { width: '100%', fontFamily: 'Tangerine-Bold', color: '#202D25', textAlign: 'center', flexShrink: 0 },

@@ -1,3 +1,6 @@
+import { PHOTO_SIZE_ERROR, PHOTO_TYPE_ERROR, PHOTO_UPLOAD_ERROR } from './profile-photo';
+import { saveSelectedPhotos, type PhotoSelections } from './profile-photos';
+
 export const PROFILE_INTENTS = ['Dating', 'Friendship', 'Networking', 'Socializing'] as const;
 export type ProfileIntention = (typeof PROFILE_INTENTS)[number];
 export type ProfileDraft = {
@@ -6,6 +9,8 @@ export type ProfileDraft = {
   gender: string;
   bio: string;
   intents: ProfileIntention[];
+  photos?: PhotoSelections;
+  photoOwner?: string;
 };
 export const emptyProfileDraft: ProfileDraft = { firstName: '', dateOfBirth: '', gender: '', bio: '', intents: [] };
 
@@ -34,14 +39,21 @@ export function validateProfile(draft: ProfileDraft, requireIntents = true): str
   return null;
 }
 
-export async function saveProfile(draft: ProfileDraft): Promise<void> {
-  const validation = validateProfile(draft);
+export async function saveProfile(draft: ProfileDraft, editing = false): Promise<void> {
+  const validation = validateProfile(draft, !editing);
   if (validation) throw new Error(validation);
   const { supabase } = await import('./supabase');
   const { data, error: authError } = await supabase.auth.getUser();
   if (authError || !data.user) throw new Error('Please log in again before saving your profile.');
+  if (draft.photoOwner && draft.photoOwner !== data.user.id) throw new Error('Please log in again before saving your profile.');
+  try {
+    await saveSelectedPhotos(data.user.id, draft.photos ?? {});
+  } catch (failure) {
+    if (failure instanceof Error && [PHOTO_SIZE_ERROR, PHOTO_TYPE_ERROR].includes(failure.message)) throw failure;
+    throw new Error(PHOTO_UPLOAD_ERROR);
+  }
   const [month, day, year] = draft.dateOfBirth.split('/');
-  const { error } = await supabase.from('profiles').upsert({
+  const values = {
     user_id: data.user.id,
     first_name: draft.firstName.trim(),
     date_of_birth: `${year}-${month}-${day}`,
@@ -49,11 +61,15 @@ export async function saveProfile(draft: ProfileDraft): Promise<void> {
     bio: draft.bio.trim() || null,
     // Profile information only; never used as discovery filters.
     intents: draft.intents,
-  }, { onConflict: 'user_id' });
+  };
+  const { error } = editing
+    ? await supabase.from('profiles').update(values).eq('user_id', data.user.id).select('user_id').single()
+    : await supabase.from('profiles').upsert(values, { onConflict: 'user_id' });
   if (error) throw new Error('We could not save your profile. Please try again in a moment.');
 }
 
 export function profileSaveError(error: unknown): string {
+  if (error instanceof Error && [PHOTO_UPLOAD_ERROR, PHOTO_SIZE_ERROR, PHOTO_TYPE_ERROR].includes(error.message)) return error.message;
   // Never display raw Supabase/import/network errors or private data.
   if (error instanceof Error && error.message === 'Please log in again before saving your profile.') return error.message;
   return 'We could not save your profile. Please check your connection and try again.';
