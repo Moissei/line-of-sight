@@ -100,6 +100,10 @@ export default function DiscoveryScreen() {
       <StatusBar style="dark" />
       <View style={[styles.content, { paddingVertical: spacing }]}>
         <View style={styles.topControls}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Account settings" disabled={busy}
+          onPress={() => router.push('/account')} style={styles.profileControl}>
+          <Text style={styles.profileLabel}>ACCOUNT</Text>
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Connections" disabled={busy}
           onPress={() => router.push('/connections')} style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
           <Text style={styles.profileLabel}>CONNECTIONS</Text>
