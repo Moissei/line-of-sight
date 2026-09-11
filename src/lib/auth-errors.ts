@@ -1,6 +1,7 @@
 // Allowlisted user-facing copy only. Never surface raw Auth responses or credentials.
 export function authErrorMessage(error: unknown): string {
   const details = error as { code?: string; name?: string; status?: number } | null;
+  if (details?.status === 429) return 'Too many attempts. Please try again shortly.';
   switch (details?.code) {
     case 'invalid_credentials': return 'The email or password is incorrect. Please try again.';
     case 'user_already_exists':
@@ -10,11 +11,10 @@ export function authErrorMessage(error: unknown): string {
     case 'email_address_invalid':
     case 'validation_failed': return 'Check your email address and password, then try again.';
     case 'over_request_rate_limit':
-    case 'over_email_send_rate_limit': return 'Too many attempts. Please wait a few minutes before trying again.';
+    case 'over_email_send_rate_limit': return 'Too many attempts. Please try again shortly.';
     case 'signup_disabled':
     case 'email_provider_disabled': return 'Account access is temporarily unavailable. Please try again later.';
   }
-  if (details?.status === 429) return 'Too many attempts. Please wait a few minutes before trying again.';
   if (details?.name === 'AuthRetryableFetchError' || details?.name === 'TypeError') {
     return 'We could not connect. Check your internet connection and try again.';
   }

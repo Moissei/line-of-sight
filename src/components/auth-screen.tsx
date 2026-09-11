@@ -116,7 +116,7 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
               <Text style={styles.label}>Password</Text>
               <TextInput accessibilityLabel="Password" value={password} onChangeText={setPassword} editable={!busy}
                 placeholder="Your password" placeholderTextColor="#7A817A" secureTextEntry autoCapitalize="none"
-                autoCorrect={false} autoComplete={signup && !needsConfirmation ? 'new-password' : 'current-password'}
+                autoCorrect={false} spellCheck={false} autoComplete={signup && !needsConfirmation ? 'new-password' : 'current-password'}
                 onSubmitEditing={signup && !needsConfirmation ? undefined : () => void submit()} style={styles.input} />
               {signup && !needsConfirmation && <Text style={styles.hint}>Use at least 8 characters. A mix of letters, numbers, and symbols is best.</Text>}
             </View>
@@ -125,7 +125,8 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
                 <Text style={styles.label}>Confirm password</Text>
                 <TextInput accessibilityLabel="Confirm password" value={confirmation} onChangeText={setConfirmation} editable={!busy}
                   placeholder="Re-enter your password" placeholderTextColor="#7A817A" secureTextEntry autoCapitalize="none"
-                  autoCorrect={false} autoComplete="new-password" onSubmitEditing={() => void submit()} style={styles.input} />
+                  autoCorrect={false} spellCheck={false} autoComplete="off" importantForAutofill="no"
+                  textContentType="none" onSubmitEditing={() => void submit()} style={styles.input} />
               </View>
             )}
             {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>}
