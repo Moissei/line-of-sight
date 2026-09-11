@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import type { NearbyProfile } from '@/lib/nearby-discovery';
+import { SafetyActions } from './safety-actions';
 import { RequestToConnect } from './request-to-connect';
 
 function PrimaryPhoto({ uri }: { uri?: string }) {
@@ -16,7 +17,7 @@ function PrimaryPhoto({ uri }: { uri?: string }) {
   </View>;
 }
 
-export function NearbyProfileCard({ profile }: { profile: NearbyProfile }) {
+export function NearbyProfileCard({ profile, onBlocked }: { profile: NearbyProfile; onBlocked: () => void }) {
   return (
     <View style={styles.card}>
       <PrimaryPhoto key={profile.primaryPhotoUrl ?? 'placeholder'} uri={profile.primaryPhotoUrl} />
@@ -35,6 +36,7 @@ export function NearbyProfileCard({ profile }: { profile: NearbyProfile }) {
         </View>
       )}
       {__DEV__ && <Text style={styles.distance}>{profile.distance_meters} m away</Text>}
+      <SafetyActions target={{ kind: 'user', id: profile.user_id }} onBlocked={onBlocked} />
       <RequestToConnect key={profile.user_id} targetUserId={profile.user_id} revision={profile.requestRevision ?? 0} />
     </View>
   );

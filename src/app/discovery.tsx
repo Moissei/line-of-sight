@@ -55,10 +55,23 @@ export default function DiscoveryScreen() {
     stopPolling.current = stop;
     return () => {
       stop();
+      stopPolling.current?.();
+      stopPolling.current = null;
       setNearby(null);
-      if (stopPolling.current === stop) stopPolling.current = null;
     };
   }, [isLooking, busy, presenceReady]));
+
+  function removeBlockedProfile(userId: string) {
+    // Cancel old RPC/signing completions and discard their signed URL cache.
+    const wasPolling = stopPolling.current !== null;
+    stopPolling.current?.();
+    stopPolling.current = null;
+    setNearby((current) => current?.status === 'ready'
+      ? { ...current, profiles: current.profiles.filter((item) => item.user_id !== userId) } : current);
+    if (wasPolling && presenceVerified.current) {
+      stopPolling.current = pollNearbyDiscovery(setNearby);
+    }
+  }
 
   async function toggleLooking() {
     if (busy || inFlight.current) return;
@@ -87,6 +100,10 @@ export default function DiscoveryScreen() {
       <StatusBar style="dark" />
       <View style={[styles.content, { paddingVertical: spacing }]}>
         <View style={styles.topControls}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Connections" disabled={busy}
+          onPress={() => router.push('/connections')} style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
+          <Text style={styles.profileLabel}>CONNECTIONS</Text>
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Incoming connection requests" disabled={busy}
           onPress={() => router.push('/requests')} style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
           <Text style={styles.profileLabel}>REQUESTS</Text>
@@ -140,7 +157,7 @@ export default function DiscoveryScreen() {
                   : 'Someone is in your line of sight'}
               </Text>
               {nearby?.status === 'ready' && nearby.profiles.map((profile) => (
-                <NearbyProfileCard key={profile.user_id} profile={profile} />
+                <NearbyProfileCard key={profile.user_id} profile={profile} onBlocked={() => removeBlockedProfile(profile.user_id)} />
               ))}
             </View>
           )}
@@ -164,7 +181,7 @@ export default function DiscoveryScreen() {
 }
 
 const styles = StyleSheet.create({
-  topControls: { flexDirection: 'row', justifyContent: 'space-between', flexShrink: 0 },
+  topControls: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', flexShrink: 0 },
   profileControl: { alignSelf: 'flex-end', flexShrink: 0, minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
   profileLabel: { color: '#253D2F', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
