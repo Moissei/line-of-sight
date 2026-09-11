@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useColorScheme } from 'react-native';
 import { OnboardingProvider } from '@/components/onboarding-provider';
+import { isAccountDeleted, onAccountDeleted, resetDeletedAccount } from '@/lib/delete-account';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,15 +22,19 @@ export default function RootLayout() {
   const [auth, setAuth] = useState({ ready: false, signedIn: false, generation: 0 });
   useEffect(() => {
     let previousUser: string | null = null;
+    const unsubscribeDeletion = onAccountDeleted(() => {
+      setAuth(current => ({ ready: true, signedIn: false, generation: current.generation + 1 }));
+    });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') resetDeletedAccount();
       const nextUser = session?.user.id ?? null;
       const reset = event === 'SIGNED_OUT' || (previousUser !== null && previousUser !== nextUser);
       previousUser = nextUser;
-      setAuth((current) => ({ ready: true, signedIn: !!session, generation: current.generation + (reset ? 1 : 0) }));
+      setAuth((current) => ({ ready: true, signedIn: !!session && !isAccountDeleted(), generation: current.generation + (reset ? 1 : 0) }));
       // Do not await Supabase APIs inside an Auth callback.
       if (reset) setTimeout(() => { void supabase.removeAllChannels().catch(() => {}); }, 0);
     });
-    return () => data.subscription.unsubscribe();
+    return () => { unsubscribeDeletion(); data.subscription.unsubscribe(); };
   }, []);
 
   const colorScheme = useColorScheme();

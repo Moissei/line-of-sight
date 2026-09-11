@@ -31,11 +31,12 @@ function fixture({ fail = false, presenceFails = false, cleanupFails = false } =
   let i=0, tree; const values=[];
   const react={ useState(initial) { const n=i++; if (!(n in values)) values[n]=initial; return [values[n],v=> { values[n]=v; }]; },
     useRef(initial) { const n=i++; return values[n] ?? (values[n]={current:initial}); } };
-  const native=Object.fromEntries(['Modal','Pressable','Text','View'].map(x=>[x,x]));native.StyleSheet={create:x=>x};
+  const native=Object.fromEntries(['Modal','Pressable','Text','View','ScrollView'].map(x=>[x,x]));native.StyleSheet={create:x=>x};
   const jsx=(type,props)=>({type,props});
   const {default:Screen}=load('src/app/account.tsx', { react, 'react/jsx-runtime': { jsx,jsxs:jsx },
     'expo-router': {useRouter:()=>({back(){}})}, 'react-native':native,
-    'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'}, '@/lib/logout':helper, '@/lib/safety-actions':locks });
+    'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'}, '@/lib/logout':helper, '@/lib/safety-actions':locks,
+    '@/lib/delete-account': {} });
   function render(){ i=0;tree=Screen(); }
   function nodes(x){ if (!x || typeof x!=='object') return []; if(Array.isArray(x))return x.flatMap(nodes);
     if(x.type==='Modal'&&!x.props.visible)return []; return [x,...nodes(x.props?.children)]; }
@@ -67,7 +68,7 @@ test('auth change resets local provider/navigation and protects every authentica
   const realtime=fs.readFileSync('src/lib/message-realtime.ts','utf8');assert.match(realtime,/if \(stopped\) return/);assert.match(realtime,/controller|abort.abort\(\)/);
 });
 test('SIGNED_OUT changes the real layout guard and remount key; token refresh preserves state', async () => {
-  let callback, tree, index=0; const state=[], effects=[];
+  let callback, deletionCallback, tree, index=0; const state=[], effects=[];
   global.__DEV__=false;
   const react={ useState(initial){ const n=index++;if(!(n in state))state[n]=initial;return[state[n],v=>{state[n]=typeof v==='function'?v(state[n]):v;}];},useEffect(fn){effects.push(fn);} };
   const jsx=(type,props,key)=>({type,props,key});
@@ -77,6 +78,7 @@ test('SIGNED_OUT changes the real layout guard and remount key; token refresh pr
     'expo-router':{DarkTheme:{},DefaultTheme:{},Stack,ThemeProvider:'Theme'},
     'expo-splash-screen':{preventAutoHideAsync(){},hideAsync(){}},'react-native':{useColorScheme:()=>null},
     '@/components/onboarding-provider':{OnboardingProvider:'Provider'},'@/assets/fonts/Tangerine-Bold.ttf':1,
+    '@/lib/delete-account': { isAccountDeleted:()=>false, resetDeletedAccount(){}, onAccountDeleted(fn){deletionCallback=fn;return()=>{};} },
     '@/lib/supabase':{supabase:{auth:{onAuthStateChange(fn){callback=fn;return{data:{subscription:{unsubscribe(){}}}};}},async removeAllChannels(){}}},
   });
   function render(){index=0;tree=Layout();}
@@ -86,5 +88,7 @@ test('SIGNED_OUT changes the real layout guard and remount key; token refresh pr
   assert.equal(guard(),true);const key=provider().key;
   callback('TOKEN_REFRESHED',{user:{id:'internal'}});render();assert.equal(provider().key,key);
   callback('SIGNED_OUT',null);render();assert.equal(guard(),false);assert.notEqual(provider().key,key);
+  callback('SIGNED_IN',{user:{id:'internal'}});render();assert.equal(guard(),true);
+  const beforeDeletion=provider().key;deletionCallback();render();assert.equal(guard(),false);assert.notEqual(provider().key,beforeDeletion);
   await new Promise(r=>setTimeout(r,5));delete global.__DEV__;
 });
