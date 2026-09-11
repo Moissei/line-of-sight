@@ -1,0 +1,3 @@
+[functions.delete-account]
+# Defense in depth: gateway verification plus explicit handler JWT verification.
+verify_jwt = true
