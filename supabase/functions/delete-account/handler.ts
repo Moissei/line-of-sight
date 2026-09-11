@@ -53,8 +53,22 @@ export function createDeleteAccountHandler(api: DeletionServices, allowedOrigins
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     if (request.method !== 'POST') { headers.set('Allow', 'POST, OPTIONS'); return reply(405); }
     if (new URL(request.url).search) return reply(400);
-    // No input payload is accepted, including a target identity or confirmation flag.
-    if (request.body !== null) return reply(400);
+    // Edge runtimes may represent an empty POST as a non-null stream.
+    // Inspect bytes, not stream presence; never buffer or parse a payload.
+    if (request.body !== null) {
+      const reader = request.body.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value.byteLength > 0) {
+            void reader.cancel().catch(() => {});
+            return reply(400);
+          }
+        }
+      } catch { return reply(400); }
+      finally { reader.releaseLock(); }
+    }
     const match = /^Bearer ([^\s]+)$/i.exec(request.headers.get('authorization') ?? '');
     if (!match) return reply(401);
     try {

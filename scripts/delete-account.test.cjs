@@ -20,6 +20,9 @@ function fixture(initial='active'){
  request(options={}){return handler(new Request('https://function.example/delete-account',{method:'POST',headers:{Authorization:'Bearer verified-token'},...options}));}};
 }
 for(const state of ['active','pending','prepared'])test(`successful lifecycle/retry from ${state}`,async()=>{const f=fixture(state);const r=await f.request();assert.equal(r.status,200);assert.deepEqual(await r.json(),{success:true});assert.equal(f.state(),'deleted');assert.equal(f.objects.size,0);assert.ok(f.calls.indexOf('prepare')>f.calls.indexOf('remove'));});
+test('authenticated zero-byte body completes the mocked lifecycle',async()=>{
+ const f=fixture();const r=await f.request({body:''});assert.equal(r.status,200);assert.equal(f.state(),'deleted');
+});
 test('missing/invalid JWT rejected before lifecycle',async()=>{const f=fixture();assert.equal((await f.request({headers:{}})).status,401);f.set({verified:false});assert.equal((await f.request()).status,401);assert.deepEqual(f.calls,[]);});
 test('body/query targets forbidden',async()=>{const f=fixture();assert.equal((await f.request({body:JSON.stringify({target_user_id:id})})).status,400);assert.equal((await f.handler(new Request('https://function.example?user_id=x',{method:'POST'}))).status,400);assert.equal(f.calls.length,0);});
 test('Storage failure preserves pending; retry finishes',async()=>{const f=fixture();f.set({failStorage:true});const r=await f.request();assert.equal(r.status,503);assert.equal(f.state(),'pending');assert.equal(f.calls.includes('deleteAuth'),false);assert.equal((await r.text()).includes(id),false);f.set({failStorage:false});assert.equal((await f.request()).status,200);});

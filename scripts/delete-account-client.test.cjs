@@ -2,12 +2,54 @@ const fs = require('node:fs');
 const ts = require('typescript');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { createClient } = require('@supabase/supabase-js');
 function load(path, deps) {
   const code=ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   const module={exports:{}};
   new Function('require','module','exports',code)(id=>{if(id in deps)return deps[id];throw Error('Unexpected dependency');},module,module.exports);
   return module.exports;
 }
+
+test('installed Supabase SDK sends a bodyless POST with session authorization and no query', async () => {
+  const token = 'mock-session-access-token';
+  let captured;
+  const client = createClient('https://example.invalid', 'mock-publishable-key', {
+    accessToken: async () => token,
+    global: { fetch: async (url, init) => {
+      captured = { url: String(url), init };
+      return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
+    } },
+  });
+  const { error } = await client.functions.invoke('delete-account', { method: 'POST' });
+  assert.equal(error, null);
+  assert.equal(captured.url, 'https://example.invalid/functions/v1/delete-account');
+  assert.equal(new URL(captured.url).search, '');
+  assert.equal(captured.init.method, 'POST');
+  assert.equal(captured.init.body, undefined);
+  const headers = new Headers(captured.init.headers);
+  assert.equal(headers.get('Authorization'), `Bearer ${token}`);
+  assert.equal(headers.get('apikey'), 'mock-publishable-key');
+  assert.equal(headers.has('Content-Type'), false);
+  assert.doesNotMatch(JSON.stringify(captured), /user_id|target_user_id|userId/);
+});
+
+test('handler accepts null and zero-byte bodies, rejects all payload bytes and queries', async () => {
+  const { createDeleteAccountHandler } = load('supabase/functions/delete-account/handler.ts', {});
+  const handler = createDeleteAccountHandler({}, []);
+  const url = 'https://example.invalid/functions/v1/delete-account';
+  assert.equal((await handler(new Request(url, { method: 'POST' }))).status, 401);
+  assert.equal((await handler(new Request(url + '?unexpected=1', { method: 'POST' }))).status, 400);
+  // A transport can represent zero bytes as a non-null body stream.
+  const request = new Request(url, { method: 'POST', body: '' });
+  assert.equal(await request.clone().text(), '');
+  assert.notEqual(request.body, null);
+  assert.equal((await handler(request)).status, 401);
+  for (const body of ['x', '{}', ' \n\t', '{"target_user_id":"untrusted"}']) {
+    const result = await handler(new Request(url, { method: 'POST', body }));
+    assert.equal(result.status, 400);
+    assert.deepEqual(await result.json(), { error: 'Could not complete this request. Please try again.' });
+  }
+});
 function fixture() {
   const calls=[];let fail=false, hold=false, release;
   const client={functions:{async invoke(name,options){calls.push('invoke');assert.equal(name,'delete-account');assert.deepEqual(options,{method:'POST'});if(hold)await new Promise(r=>release=r);return fail?{error:{message:'private-secret'}}:{data:{success:true},error:null};}},
