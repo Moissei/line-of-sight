@@ -26,7 +26,7 @@ function fixture({ fail = false, presenceFails = false, cleanupFails = false } =
     }; },
     async removeAllChannels() { calls.push('cleanup'); if (cleanupFails) throw Error('private'); },
   };
-  const helper = load('src/lib/logout.ts', { './supabase': { supabase: client } });
+  const helper = load('src/lib/logout.ts', { './supabase': { supabase: client }, './push-notifications': { async unregisterPushForLogout(){ throw Error('private'); } } });
   const locks = load('src/lib/safety-actions.ts', {});
   let i=0, tree; const values=[];
   const react={ useState(initial) { const n=i++; if (!(n in values)) values[n]=initial; return [values[n],v=> { values[n]=v; }]; },
@@ -79,6 +79,7 @@ test('SIGNED_OUT changes the real layout guard and remount key; token refresh pr
     'expo-splash-screen':{preventAutoHideAsync(){},hideAsync(){}},'react-native':{useColorScheme:()=>null},
     '@/components/onboarding-provider':{OnboardingProvider:'Provider'},'@/assets/fonts/Tangerine-Bold.ttf':1,
     '@/lib/delete-account': { isAccountDeleted:()=>false, resetDeletedAccount(){}, onAccountDeleted(fn){deletionCallback=fn;return()=>{};} },
+    '@/lib/use-push-notifications': { usePushNotifications(){} },
     '@/lib/supabase':{supabase:{auth:{onAuthStateChange(fn){callback=fn;return{data:{subscription:{unsubscribe(){}}}};}},async removeAllChannels(){}}},
   });
   function render(){index=0;tree=Layout();}

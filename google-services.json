@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "100186103857",
+    "project_id": "line-of-sight-b11c7",
+    "storage_bucket": "line-of-sight-b11c7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100186103857:android:7262baef24e64e194a3510",
+        "android_client_info": {
+          "package_name": "com.chroniclesxo.lineofsight"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCroAY7JO37vs9A6FpSbFSsLj6Eg4X8t_8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

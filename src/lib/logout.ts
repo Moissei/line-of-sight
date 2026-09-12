@@ -2,6 +2,10 @@ export const LOGOUT_ERROR = 'Couldn’t log out. Please try again.';
 
 export async function logOut(): Promise<void> {
   const { supabase } = await import('./supabase');
+  try {
+    const { unregisterPushForLogout } = await import('./push-notifications');
+    await unregisterPushForLogout();
+  } catch { /* Notification cleanup must never prevent logout. */ }
   // STOP is best effort: no location access, and a missing presence row is fine.
   try {
     const { data, error } = await supabase.auth.getUser();

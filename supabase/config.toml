@@ -1,3 +1,8 @@
 [functions.delete-account]
 # Defense in depth: gateway verification plus explicit handler JWT verification.
 verify_jwt = true
+
+[functions.send-push]
+# Server webhook only: handler requires the independent PUSH_WEBHOOK_SECRET.
+# Ordinary user JWTs grant no access. Not deployed by this change.
+verify_jwt = false

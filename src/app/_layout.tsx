@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useColorScheme } from 'react-native';
 import { OnboardingProvider } from '@/components/onboarding-provider';
 import { isAccountDeleted, onAccountDeleted, resetDeletedAccount } from '@/lib/delete-account';
+import { usePushNotifications } from '@/lib/use-push-notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     'Tangerine-Bold': require('@/assets/fonts/Tangerine-Bold.ttf'),
   });
+  usePushNotifications(auth.ready && auth.signedIn && fontsLoaded, auth.generation);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
