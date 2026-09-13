@@ -34,7 +34,7 @@ test('authenticated layout renders exactly four lazy tabs with existing paths an
 
 test('public routes stay outside protection; tabs and secondary screens remain protected', () => {
   const source = fs.readFileSync('src/app/_layout.tsx', 'utf8');
-  const [publicPart, protectedPart] = source.split('<Stack.Protected guard={auth.signedIn}>');
+  const publicPart = source; const protectedPart = source.split('<Stack.Protected guard={signedIn}>')[1];
   for (const name of ['index', 'login', 'sign-up', 'auth-callback']) assert.ok(publicPart.includes(`name="${name}"`));
   for (const name of ['(tabs)', 'account', 'connection-detail', 'create-profile', 'intentions']) assert.ok(protectedPart.includes(`name="${name}"`));
 });

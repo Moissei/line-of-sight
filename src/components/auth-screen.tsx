@@ -75,7 +75,7 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
       setPassword('');
       setConfirmation('');
       if (data.session) {
-        router.replace(signup ? '/create-profile' : '/discovery');
+        router.replace('/profile-gate');
       } else if (signup) {
         // Supabase can deliberately obscure duplicate accounts. Do not claim an
         // account was created until there is a session; give a safe confirmation path.

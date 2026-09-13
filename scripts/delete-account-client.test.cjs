@@ -81,7 +81,7 @@ test('missing success confirmation fails closed',async()=>{
  const f=fixture();f.client.functions.invoke=async()=>({data:{}});await assert.rejects(f.helper.deleteAccount(),/We couldn't finish/);assert.equal(f.helper.isAccountDeleted(),false);assert.deepEqual(f.calls,[]);
 });
 test('deletion reset protects navigation and helper has no database writes or privileged credentials',()=>{
- const root=fs.readFileSync('src/app/_layout.tsx','utf8');assert.match(root,/onAccountDeleted\(\(\) =>/);assert.match(root,/signedIn: false, generation: current.generation \+ 1/);assert.match(root,/!isAccountDeleted\(\)/);
+ const root=fs.readFileSync('src/app/_layout.tsx','utf8');assert.match(root,/onAccountDeleted\(\(\) =>/);assert.match(root,/signedIn: false, userId: null, generation: current.generation \+ 1/);assert.match(root,/!isAccountDeleted\(\)/);
  const source=fs.readFileSync('src/lib/delete-account.ts','utf8');assert.doesNotMatch(source,/console\.|service_role|SERVICE_ROLE|\.from\(|\.rpc\(|getUser\(/);
 });
 

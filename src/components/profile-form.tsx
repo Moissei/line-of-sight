@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { SymbolView } from 'expo-symbols';
-import { useContext, useRef, useState } from 'react';
+import { useContext, useRef, useState, type ReactNode } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -19,7 +19,7 @@ import { useOnboarding } from '@/components/onboarding-provider';
 import { validateProfile, saveProfile, profileSaveError, PROFILE_INTENTS } from '@/lib/profile';
 import { ProfilePhotoSlots } from '@/components/profile-photo-slots';
 
-export function ProfileForm({ editing = false, tabScreen = false }: { editing?: boolean; tabScreen?: boolean }) {
+export function ProfileForm({ editing = false, tabScreen = false, topAction }: { editing?: boolean; tabScreen?: boolean; topAction?: ReactNode }) {
   const router = useRouter();
   const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
   const { draft, setDraft } = useOnboarding();
@@ -59,14 +59,14 @@ export function ProfileForm({ editing = false, tabScreen = false }: { editing?: 
           contentContainerStyle={[styles.content, tabScreen && { paddingBottom: tabBarHeight + 24 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag">
-          {!tabScreen && <Pressable
+          {!tabScreen && (topAction ?? <Pressable
             accessibilityRole="button"
             accessibilityLabel={editing ? "Back to discovery" : "Back to welcome"}
             disabled={saving}
             onPress={() => router.canGoBack() ? router.back() : router.replace(editing ? '/discovery' : '/')}
             style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
             <Text style={styles.backLabel}>Back</Text>
-          </Pressable>}
+          </Pressable>)}
 
           <View style={styles.heading}>
             <View style={styles.headerRow}>
@@ -82,9 +82,9 @@ export function ProfileForm({ editing = false, tabScreen = false }: { editing?: 
 
           <View style={styles.form} pointerEvents={saving ? "none" : "auto"}>
             <View style={styles.field}>
-              <Text style={styles.label}>First name</Text>
+              <Text style={styles.label}>Name</Text>
               <TextInput
-                accessibilityLabel="First name"
+                accessibilityLabel="Name"
                 autoComplete="given-name"
                 autoCapitalize="words"
                 placeholder="Your first name"
@@ -115,7 +115,7 @@ export function ProfileForm({ editing = false, tabScreen = false }: { editing?: 
 
             <View style={styles.field}>
               <Text style={styles.label}>Gender</Text>
-              {editing ? <View style={styles.field}>
+              {<View style={styles.field}>
                 <View style={styles.genderOptions}>
                   {(['Male', 'Female'] as const).map((option) => <Pressable key={option}
                     accessibilityRole="radio" accessibilityLabel={option}
@@ -133,33 +133,27 @@ export function ProfileForm({ editing = false, tabScreen = false }: { editing?: 
                 </View>
                 {!!gender && gender !== 'Male' && gender !== 'Female' &&
                   <Text style={styles.hint}>Your saved value is unchanged until you select an option.</Text>}
-              </View> : <TextInput
-                accessibilityLabel="Gender"
-                placeholder="How you describe yourself"
-                placeholderTextColor="#7A817A"
-                autoCapitalize="sentences"
-                value={gender}
-                onChangeText={setGender}
-                maxLength={60}
-                style={styles.input}
-              />}
+              </View>}
             </View>
 
             <ProfilePhotoSlots onBusy={setPicking} editing={editing} />
 
             <View style={styles.field}>
-              <Text style={styles.label}>{editing ? 'A little about me' : 'Short bio'}</Text>
+              <Text style={styles.label}>A glimpse</Text>
+              <View style={styles.bioBorder}>
               <TextInput
-                accessibilityLabel={editing ? 'A little about me' : 'Short bio'}
-                placeholder="A little about what makes you, you."
+                accessibilityLabel="A glimpse"
+                placeholder="Share a little about yourself…"
+                underlineColorAndroid="transparent"
                 placeholderTextColor="#7A817A"
                 value={bio}
                 onChangeText={setBio}
                 maxLength={200}
                 multiline
                 textAlignVertical="top"
-                style={[styles.input, styles.bio]}
+                style={[styles.input, styles.bio, styles.bioInput]}
               />
+              </View>
               <Text style={[styles.hint, styles.counter]}>{bio.length}/200</Text>
             </View>
             {editing && <View style={styles.field}>
@@ -234,6 +228,8 @@ const styles = StyleSheet.create({
   },
   hint: { fontSize: 12, lineHeight: 18, color: '#656D66' },
   bio: { minHeight: 88 },
+  bioBorder: { borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 12 },
+  bioInput: { minHeight: 86, borderWidth: 0, borderRadius: 0, backgroundColor: 'transparent' },
   counter: { textAlign: 'right' },
   footer: { marginTop: 'auto', paddingTop: 24, gap: 12 },
   continueButton: {

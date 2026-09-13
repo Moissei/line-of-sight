@@ -7,7 +7,7 @@ import { useOnboarding } from './onboarding-provider';
 import { validatePhoto } from '@/lib/profile-photo';
 import { ownPhotoPreviews, photoUser, PHOTO_POSITIONS, reconcilePhotos, removeOwnPhoto, type PhotoPosition } from '@/lib/profile-photos';
 
-export function ProfilePhotoSlots({ onBusy, editing = false }: { onBusy: (busy: boolean) => void; editing?: boolean }) {
+export function ProfilePhotoSlots({ onBusy }: { onBusy: (busy: boolean) => void; editing?: boolean }) {
   const { draft, setDraft } = useOnboarding();
   const [remote, setRemote] = useState<PhotoPosition[]>([]);
   const [previews, setPreviews] = useState<Partial<Record<PhotoPosition, string>>>({});
@@ -100,37 +100,29 @@ export function ProfilePhotoSlots({ onBusy, editing = false }: { onBusy: (busy: 
       const exists = !!selected || remote.includes(position);
       const uri = selected?.uri ?? (remote.includes(position) ? previews[position] : undefined);
       return <View key={position} style={styles.slot}>
-        {!editing && <Text style={styles.label}>{position === 1 ? '1 · Primary' : `Slot ${position}`}</Text>}
         <View>
         <Pressable disabled={busy || !ready} accessibilityRole="button"
           accessibilityLabel={`${exists ? 'Replace' : 'Add'} photo in slot ${position}${position === 1 ? ', Primary' : ''}`}
           onPress={() => void choose(position)} style={styles.tile}>
           {uri ? <Image source={{ uri }} style={styles.image} resizeMode="cover" accessibilityLabel={`Photo ${position}`}
             onError={() => setError('A preview could not load. Tap Refresh photos to retry.')} />
-            : <Text style={styles.placeholder}>{exists ? 'Photo saved' : editing ? '+ Add' : '+'}</Text>}
-          {editing && position === 1 && <View pointerEvents="none" style={styles.primaryBadge}>
+            : <Text style={styles.placeholder}>{exists ? 'Photo saved' : '+ Add'}</Text>}
+          {exists && position === 1 && <View pointerEvents="none" style={styles.primaryBadge}>
             <Text style={styles.primaryLabel}>PRIMARY</Text>
           </View>}
         </Pressable>
-        {editing && exists && <Pressable disabled={busy || !ready} accessibilityRole="button"
+        {exists && <Pressable disabled={busy || !ready} accessibilityRole="button"
           accessibilityLabel={`Remove photo ${position}`} accessibilityState={{ disabled: busy || !ready }}
           onPress={() => void remove(position)} style={styles.removeTarget}>
           <View style={styles.removeCircle}><SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={14} tintColor="#253D2F" /></View>
         </Pressable>}
         </View>
-        {!editing && <Pressable disabled={busy || !ready} accessibilityRole="button" onPress={() => void choose(position)} style={styles.action}>
-          <Text style={styles.actionText}>{exists ? 'Replace' : 'Add photo'}</Text>
-        </Pressable>}
-        {!editing && exists && <Pressable disabled={busy || !ready} accessibilityRole="button" accessibilityLabel={`Remove photo ${position}`}
-          onPress={() => void remove(position)} style={styles.action}><Text style={styles.hint}>Remove</Text></Pressable>}
       </View>;
     })}</View>
-    {!editing && <Text style={styles.hint}>Optional. Up to 3 photos, 5 MiB each. JPEG, PNG or WebP. Slot 1 is always Primary.</Text>}
-    {!editing && <Text style={styles.hint}>New photos save when you finish your profile. Removing a saved photo takes effect now.</Text>}
     {busy && <Text style={styles.hint}>Updating photos...</Text>}
     {!ready && !error && <Text style={styles.hint}>Loading photos...</Text>}
     {!!error && <Text accessibilityRole="alert" style={styles.hint}>{error}</Text>}
-    {(!editing || !!error) && <Pressable disabled={busy} accessibilityRole="button" onPress={() => void load()} style={styles.action}>
+    {!!error && <Pressable disabled={busy} accessibilityRole="button" onPress={() => void load()} style={styles.action}>
       <Text style={styles.actionText}>Refresh photos</Text>
     </Pressable>}
   </View>;

@@ -1,3 +1,4 @@
+import { useProfileStatus } from '@/components/profile-status-provider';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -13,6 +14,7 @@ export default function EditProfileScreen() {
 }
 function EditProfileContent() {
   const router = useRouter();
+  const { refresh: refreshProfileStatus } = useProfileStatus();
   const { draft, setDraft } = useOnboarding();
   const [loadedOwner, setLoadedOwner] = useState<string>();
   const [error, setError] = useState(false);
@@ -25,8 +27,9 @@ function EditProfileContent() {
         const { data: auth, error: authError } = await supabase.auth.getUser();
         if (authError || !auth.user) throw new Error('Account unavailable');
         const { data, error: readError } = await supabase.from('profiles')
-          .select('first_name,date_of_birth,gender,bio,intents').eq('user_id', auth.user.id).single();
-        if (readError || !data) throw new Error('Profile unavailable');
+          .select('first_name,date_of_birth,gender,bio,intents').eq('user_id', auth.user.id).maybeSingle();
+        if (readError) throw new Error('Profile unavailable');
+        if (!data) { if (!cancelled) await refreshProfileStatus(); return; }
         const { data: current, error: currentError } = await supabase.auth.getUser();
         if (cancelled) return;
         if (currentError || current.user?.id !== auth.user.id) throw new Error('Account changed');
@@ -41,7 +44,7 @@ function EditProfileContent() {
     }
     void load();
     return () => { cancelled = true; };
-  }, [attempt, setDraft]);
+  }, [attempt, setDraft, refreshProfileStatus]);
   if (loadedOwner && draft.photoOwner === loadedOwner) return <ProfileForm editing tabScreen />;
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}><View style={styles.content}>
     <View style={styles.headerRow}>

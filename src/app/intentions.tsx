@@ -1,3 +1,5 @@
+import { useProfileStatus } from '@/components/profile-status-provider';
+import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
@@ -11,6 +13,7 @@ type Intention = (typeof intentions)[number];
 
 export default function IntentionsScreen() {
   const router = useRouter();
+  const { refresh: refreshProfileStatus } = useProfileStatus();
   // Descriptive profile information only: NEVER use these intentions to filter nearby
   // visibility in either direction. All actively discoverable users within the required
   // proximity must be able to appear to each other regardless of their intentions.
@@ -35,7 +38,7 @@ export default function IntentionsScreen() {
       await saveProfile(draft);
       if (mounted.current) {
         setDraft(emptyProfileDraft);
-        router.replace('/discovery');
+        await refreshProfileStatus();
       }
     } catch (failure) {
       if (mounted.current) setError(profileSaveError(failure));
@@ -83,9 +86,7 @@ export default function IntentionsScreen() {
                 onPress={() => toggleIntention(intention)}
                 style={({ pressed }) => [styles.option, selected && styles.selectedOption, pressed && styles.pressed]}>
                 <Text style={[styles.optionLabel, selected && styles.selectedLabel]}>{intention}</Text>
-                <View style={[styles.checkbox, selected && styles.selectedCheckbox]}>
-                  <Text accessible={false} style={styles.checkmark}>{selected ? '\u2713' : ''}</Text>
-                </View>
+                {selected && <SymbolView name={{ ios: 'checkmark', android: 'check', web: 'check' }} size={16} tintColor="#253D2F" />}
               </Pressable>
             );
           })}
@@ -131,29 +132,19 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, lineHeight: 22, color: '#656D66' },
   options: { gap: 12 },
   option: {
-    minHeight: 64,
-    padding: 18,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: '#C9CEC7',
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 8,
   },
-  selectedOption: { backgroundColor: '#253D2F', borderColor: '#253D2F' },
-  optionLabel: { flex: 1, fontSize: 17, fontWeight: '600', color: '#202D25' },
-  selectedLabel: { color: '#FFFFFF' },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#C9CEC7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectedCheckbox: { backgroundColor: '#FEFCF8', borderColor: '#FEFCF8' },
-  checkmark: { fontSize: 16, lineHeight: 20, color: '#253D2F', fontWeight: '700' },
+  selectedOption: { backgroundColor: '#E8EEE5', borderColor: '#253D2F' },
+  optionLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: '#202D25' },
+  selectedLabel: { color: '#253D2F' },
   note: { marginTop: 20, fontSize: 14, lineHeight: 22, color: '#656D66' },
   footer: { marginTop: 'auto', paddingTop: 28, gap: 12 },
   finishButton: {

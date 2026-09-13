@@ -32,11 +32,14 @@ export default function AccountScreen() {
   }
   return <SafeAreaView style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.header}>
       <Pressable accessibilityRole="button" style={styles.back} onPress={() => router.back()}>
         <SymbolView name={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }} size={18} tintColor="#253D2F" />
         <Text style={styles.link}>Back</Text>
       </Pressable>
-      <Text accessibilityRole="header" style={styles.title}>Account</Text>
+        <Text accessibilityRole="header" style={[styles.title, styles.accountTitle]}>Account</Text>
+        <View style={styles.headerSpacer} accessible={false} />
+      </View>
       <Pressable accessibilityRole="button" style={({ pressed }) => [styles.logoutRow, pressed && styles.pressed]} onPress={() => { setError(false); setConfirm(true); }}>
         <Text style={styles.link}>Log Out</Text>
         <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} size={18} tintColor="#7A817A" />
@@ -46,13 +49,13 @@ export default function AccountScreen() {
           <Text style={styles.danger}>Delete Account</Text>
           <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} size={18} tintColor="#923C32" />
         </Pressable>
-        <Text style={styles.deletionExplanation}>Permanently delete your account, profile and photos. This cannot be undone. Conversation history may remain visible to people you&apos;ve connected with as Deleted User.</Text>
+        <Text style={styles.deletionExplanation}>Permanently delete your account, profile, and photos. This cannot be undone. Your conversation history may remain visible to people you&apos;ve connected with as Deleted User.</Text>
       </View>
     </ScrollView>
     <Modal visible={confirm} transparent animationType="fade" onRequestClose={() => { if (!lock.current) setConfirm(false); }}>
       <View style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
         <Text accessibilityRole="header" style={styles.title}>Log out?</Text>
-        <Text style={styles.text}>We’ll try to stop your Looking session, then log you out on this device.</Text>
+        <Text style={styles.text}>Logging out will stop Looking and sign you out of this device.</Text>
         {error && <Text accessibilityRole="alert" style={styles.text}>{LOGOUT_ERROR}</Text>}
         <Pressable accessibilityRole="button" disabled={busy} style={styles.button} onPress={() => void submit()}><Text style={styles.link}>{busy ? 'Logging out...' : 'Log Out'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={busy} style={styles.button} onPress={() => setConfirm(false)}><Text style={styles.link}>Cancel</Text></Pressable>
@@ -70,7 +73,10 @@ export default function AccountScreen() {
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
-  back: { minHeight: 44, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
+  accountTitle: { flex: 1, textAlign: 'center' },
+  headerSpacer: { width: 72 },
+  back: { width: 72, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 },
   logoutRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 16 },
   pressed: { opacity: 0.65 },
   dangerSection: { borderTopWidth: 1, borderTopColor: '#DDD6CC', paddingTop: 4, gap: 4 },

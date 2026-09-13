@@ -1,3 +1,4 @@
+import { ProfileStatusProvider, useProfileStatus } from '@/components/profile-status-provider';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,18 +21,18 @@ export default function RootLayout() {
     }
   }, []);
 
-  const [auth, setAuth] = useState({ ready: false, signedIn: false, generation: 0 });
+  const [auth, setAuth] = useState({ ready: false, signedIn: false, generation: 0, userId: null as string | null });
   useEffect(() => {
     let previousUser: string | null = null;
     const unsubscribeDeletion = onAccountDeleted(() => {
-      setAuth(current => ({ ready: true, signedIn: false, generation: current.generation + 1 }));
+      setAuth(current => ({ ready: true, signedIn: false, userId: null, generation: current.generation + 1 }));
     });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') resetDeletedAccount();
       const nextUser = session?.user.id ?? null;
       const reset = event === 'SIGNED_OUT' || (previousUser !== null && previousUser !== nextUser);
       previousUser = nextUser;
-      setAuth((current) => ({ ready: true, signedIn: !!session && !isAccountDeleted(), generation: current.generation + (reset ? 1 : 0) }));
+      setAuth((current) => ({ ready: true, signedIn: !!session && !isAccountDeleted(), userId: nextUser, generation: current.generation + (reset ? 1 : 0) }));
       // Do not await Supabase APIs inside an Auth callback.
       if (reset) setTimeout(() => { void supabase.removeAllChannels().catch(() => {}); }, 0);
     });
@@ -42,7 +43,7 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     'Tangerine-Bold': require('@/assets/fonts/Tangerine-Bold.ttf'),
   });
-  usePushNotifications(auth.ready && auth.signedIn && fontsLoaded, auth.generation);
+
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -57,21 +58,32 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <OnboardingProvider key={auth.generation}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="auth-callback" />
-          <Stack.Screen name="sign-up" />
-          <Stack.Protected guard={auth.signedIn}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="account" />
-            <Stack.Screen name="create-profile" />
-            <Stack.Screen name="intentions" />
-            <Stack.Screen name="connection-detail" />
-            <Stack.Screen name="explore" />
-          </Stack.Protected>
-        </Stack>
+        <ProfileStatusProvider userId={auth.signedIn ? auth.userId : null}>
+          <AuthenticatedRoutes signedIn={auth.signedIn} generation={auth.generation} />
+        </ProfileStatusProvider>
       </OnboardingProvider>
     </ThemeProvider>
   );
+}
+
+function AuthenticatedRoutes({ signedIn, generation }: { signedIn: boolean; generation: number }) {
+  const { status } = useProfileStatus();
+  const complete = signedIn && status === 'complete';
+  usePushNotifications(complete, generation);
+  return <Stack screenOptions={{ headerShown: false }}>
+    <Stack.Protected guard={!signedIn}>
+      <Stack.Screen name="index" /><Stack.Screen name="login" /><Stack.Screen name="sign-up" />
+    </Stack.Protected>
+    <Stack.Protected guard={signedIn}>
+      <Stack.Screen name="profile-gate" />
+      <Stack.Screen name="account" />
+      <Stack.Protected guard={status === 'required'}>
+        <Stack.Screen name="create-profile" /><Stack.Screen name="intentions" />
+      </Stack.Protected>
+      <Stack.Protected guard={complete}>
+        <Stack.Screen name="(tabs)" /><Stack.Screen name="connection-detail" /><Stack.Screen name="explore" />
+      </Stack.Protected>
+    </Stack.Protected>
+    <Stack.Screen name="auth-callback" />
+  </Stack>;
 }

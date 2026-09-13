@@ -83,7 +83,7 @@ test('matching passwords reach mocked signup unchanged and duplicate submissions
   const f = fixture(); f.type('Email', ' test@example.invalid '); f.type('Password', ' pass word '); f.type('Confirm password', ' pass word ');
   f.submit(); f.submit(); await f.settle();
   assert.deepEqual(f.calls, [{ email: 'test@example.invalid', password: ' pass word ', options: { emailRedirectTo: 'lineofsight://auth-callback' } }]);
-  assert.deepEqual(f.routes, ['/create-profile']);
+  assert.deepEqual(f.routes, ['/profile-gate']);
 });
 
 test('429 produces friendly copy and permits retry without exposing server text', async () => {
@@ -126,5 +126,5 @@ test('callback shows safe copy, handles query/fragment errors, and only navigate
     children[2].props.onPress(); assert.deepEqual(routes, ['/login']);
   }
   const layout = fs.readFileSync('src/app/_layout.tsx', 'utf8');
-  assert.ok(layout.indexOf('name="auth-callback"') < layout.indexOf('<Stack.Protected'));
+  assert.ok(layout.indexOf('name="auth-callback"') > layout.lastIndexOf('</Stack.Protected>'));
 });

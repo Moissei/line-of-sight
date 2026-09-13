@@ -43,7 +43,7 @@ test('editing gender has exactly two choices, preserves existing/legacy values u
     for (const choice of choices) assert.equal(choice.props.accessibilityState.checked, choice.props.accessibilityLabel === gender);
     choices[1].props.onPress(); assert.equal(f.draft().gender, 'Female');
   }
-  assert.ok(fixture('').render(false).some(n => n.type === 'TextInput' && n.props.accessibilityLabel === 'Gender'));
+  assert.deepEqual(fixture('').render(false).filter(n => n.props?.accessibilityRole === 'radio').map(n => n.props.accessibilityLabel), ['Male', 'Female']);
 });
 
 test('intent choices retain exact labels and multi-selection toggling', () => {
@@ -62,11 +62,16 @@ test('intent choices retain exact labels and multi-selection toggling', () => {
   const scroll = nodes.find(n => n.type === 'ScrollView');
   assert.equal(scroll.props.contentContainerStyle[1].paddingBottom, 104);
   assert.equal(scroll.props.keyboardShouldPersistTaps, 'handled');
-  const bio = nodes.find(n => n.type === 'TextInput' && n.props.accessibilityLabel === 'A little about me');
+  const bio = nodes.find(n => n.type === 'TextInput' && n.props.accessibilityLabel === 'A glimpse');
   assert.equal(bio.props.maxLength, 200);
+  assert.equal(bio.props.placeholder, 'Share a little about yourself…');
+  assert.equal(bio.props.underlineColorAndroid, 'transparent');
+  const name = nodes.find(n => n.type === 'TextInput' && n.props.accessibilityLabel === 'Name');
+  name.props.onChangeText('Test name');
+  assert.equal(f.draft().firstName, 'Test name');
   bio.props.onChangeText('Existing bio stays in the same field');
   assert.equal(f.draft().bio, 'Existing bio stays in the same field');
   const onboarding = f.render(false);
   assert.equal(onboarding.find(n => n.type === 'ScrollView').props.contentContainerStyle[1], false);
-  assert.ok(onboarding.some(n => n.type === 'TextInput' && n.props.accessibilityLabel === 'Short bio'));
+  assert.ok(onboarding.some(n => n.type === 'TextInput' && n.props.accessibilityLabel === 'A glimpse'));
  });

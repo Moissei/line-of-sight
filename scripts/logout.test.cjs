@@ -61,7 +61,7 @@ test('presence and channel cleanup failures do not prevent successful logout',as
 test('auth change resets local provider/navigation and protects every authenticated route',()=>{
   const source=fs.readFileSync('src/app/_layout.tsx','utf8');
   assert.match(source,/event === 'SIGNED_OUT'/);assert.match(source,/<OnboardingProvider key=\{auth.generation\}>/);
-  const protectedBlock=source.split('<Stack.Protected guard={auth.signedIn}>')[1].split('</Stack.Protected>')[0];
+  const protectedBlock=source.split('<Stack.Protected guard={signedIn}>')[1];
   for(const route of ['(tabs)','account','connection-detail','create-profile','intentions']) assert.ok(protectedBlock.includes(`name="${route}"`));
   assert.match(source,/generation: current.generation \+ \(reset \? 1 : 0\)/);
   const discovery=fs.readFileSync('src/app/(tabs)/discovery.tsx','utf8');assert.match(discovery,/stopPolling.current\?\.\(\)/);assert.match(discovery,/setNearby\(null\)/);
@@ -77,6 +77,7 @@ test('SIGNED_OUT changes the real layout guard and remount key; token refresh pr
     react,'react/jsx-runtime':{jsx,jsxs:jsx},'expo-font':{useFonts:()=>[true,null]},
     'expo-router':{DarkTheme:{},DefaultTheme:{},Stack,ThemeProvider:'Theme'},
     'expo-splash-screen':{preventAutoHideAsync(){},hideAsync(){}},'react-native':{useColorScheme:()=>null},
+    '@/components/profile-status-provider':{ProfileStatusProvider:'StatusProvider',useProfileStatus:()=>({status:'complete'})},
     '@/components/onboarding-provider':{OnboardingProvider:'Provider'},'@/assets/fonts/Tangerine-Bold.ttf':1,
     '@/lib/delete-account': { isAccountDeleted:()=>false, resetDeletedAccount(){}, onAccountDeleted(fn){deletionCallback=fn;return()=>{};} },
     '@/lib/use-push-notifications': { usePushNotifications(){} },
@@ -85,7 +86,7 @@ test('SIGNED_OUT changes the real layout guard and remount key; token refresh pr
   function render(){index=0;tree=Layout();}
   render();effects.splice(0).forEach(fn=>fn());callback('INITIAL_SESSION',{user:{id:'internal'}});render();
   const provider=()=>tree.props.children;
-  const guard=()=>provider().props.children.props.children.find(x=>x.type==='Protected').props.guard;
+  const guard=()=>provider().props.children.props.children.props.signedIn;
   assert.equal(guard(),true);const key=provider().key;
   callback('TOKEN_REFRESHED',{user:{id:'internal'}});render();assert.equal(provider().key,key);
   callback('SIGNED_OUT',null);render();assert.equal(guard(),false);assert.notEqual(provider().key,key);
