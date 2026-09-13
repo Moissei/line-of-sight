@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ACTION_ERROR, BLOCK_TITLE, blockDescription, performSafetyAction, REPORT_REASONS, runSafetyAction, validReport, type SafetyTarget } from '@/lib/safety-actions';
 
-export function SafetyActions({ target, onBlocked }: { target: SafetyTarget; onBlocked: () => void }) {
+export function SafetyActions({ target, onBlocked, trigger }: { target: SafetyTarget; onBlocked: () => void; trigger?: ReactNode }) {
   const [mode, setMode] = useState<'more' | 'block' | 'report' | 'success' | null>(null);
   const [reason, setReason] = useState('');
   const [details, setDetails] = useState('');
@@ -23,7 +23,7 @@ export function SafetyActions({ target, onBlocked }: { target: SafetyTarget; onB
   }
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel="More safety actions" style={styles.control}
-      onPress={() => { setError(false); setMode('more'); }}><Text style={styles.link}>More</Text></Pressable>
+      onPress={() => { setError(false); setMode('more'); }}>{trigger ?? <Text style={styles.link}>More</Text>}</Pressable>
     <Modal visible={mode !== null} transparent animationType="fade" onRequestClose={close}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.modal} accessibilityViewIsModal>

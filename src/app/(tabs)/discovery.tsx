@@ -7,14 +7,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { presenceErrorMessage, readDiscoveryPresence, setDiscoveryPresence } from '@/lib/discovery-presence';
 import { NearbyResult, pollNearbyDiscovery } from '@/lib/nearby-discovery';
 import { NearbyProfileCard } from '@/components/nearby-profile-card';
-import { DiscoverySearchState } from '@/components/discovery-search-state';
-import { DiscoveryWindHeadline } from '@/components/discovery-wind-headline';
+import { DiscoveryBrand } from '@/components/discovery-brand';
 
 export default function DiscoveryScreen() {
   // Only the START LOOKING press may create/reactivate a session.
   // Never derive discoverability from installation, onboarding, or profile intentions.
   const [isLooking, setIsLooking] = useState(false);
   const [busy, setBusy] = useState(true);
+  const [statusLift, setStatusLift] = useState(0);
   const [error, setError] = useState('');
   const inFlight = useRef(false);
   const [presenceReady, setPresenceReady] = useState(false);
@@ -27,6 +27,7 @@ export default function DiscoveryScreen() {
   const short = height - insets.top - insets.bottom < 400;
   const spacing = short ? 8 : compact ? 16 : 24;
   const titleSize = Math.min(short ? 44 : 56, (width - insets.left - insets.right - 56) / 6);
+  const showSearchStatus = isLooking && !busy && presenceReady && nearby?.status === 'ready' && nearby.profiles.length === 0;
 
   // Returning checks the existing row; it never starts a session. Do not reset the
   // UI to inactive on blur while a real database row may still be active.
@@ -115,36 +116,33 @@ export default function DiscoveryScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <StatusBar style="dark" />
       <View style={[styles.content, { paddingVertical: spacing }]}>
-        <Text
-          accessibilityRole="header"
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.5}
-          style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.15, transform: [{ translateY: short ? 20 : 45 }] }]}>
-          Line of Sight
-        </Text>
+        <DiscoveryBrand active={isLooking} fontSize={titleSize} compact={compact}
+          width={Math.max(0, Math.min(404, width - insets.left - insets.right - 56))} />
 
         <ScrollView style={styles.scroll} contentContainerStyle={[styles.main, { gap: spacing }, !isLooking && { paddingVertical: compact ? 24 : 48 }]}>
-          <View style={[styles.badge, isLooking ? styles.activeBadge : styles.inactiveBadge]}>
-            <View style={[styles.dot, isLooking && styles.activeDot]} />
-            <Text style={[styles.badgeLabel, isLooking && styles.activeLabel]}>
-              {isLooking ? 'SESSION ACTIVE' : 'SESSION INACTIVE'}
-            </Text>
-          </View>
+          <View onLayout={({ nativeEvent }) => setStatusLift(Math.min(38, Math.max(0, nativeEvent.layout.y - 12)))}
+            style={[styles.statusGroup, { gap: spacing }, isLooking && { transform: [{ translateY: -statusLift }] }]}>
+            <View style={[styles.badge, isLooking ? styles.activeBadge : styles.inactiveBadge]}>
+              <View style={[styles.dot, isLooking && styles.activeDot]} />
+              <Text style={[styles.badgeLabel, isLooking && styles.activeLabel]}>
+                {isLooking ? 'SESSION ACTIVE' : 'SESSION INACTIVE'}
+              </Text>
+            </View>
 
-          <View style={[styles.message, !isLooking && styles.inactiveMessage]} accessibilityLiveRegion="polite" accessible>
-            {isLooking ? <Text style={[styles.statusTitle, { fontSize: short ? 20 : 22 }]}>
-              You are discoverable
-            </Text> : <DiscoveryWindHeadline fontSize={short ? 20 : 30} />}
-            <Text style={[styles.description, !isLooking && styles.inactiveDescription, { fontSize: short ? 14 : 16, lineHeight: short ? 20 : 24 }]}>
-              {isLooking
-                ? 'You are currently visible to nearby users. Stop looking whenever you like.'
-                : 'You are not currently visible to nearby users. Start looking when you are ready to connect.'}
-            </Text>
+            <View style={[styles.message, !isLooking && styles.inactiveMessage]} accessibilityLiveRegion="polite" accessible>
+              {isLooking && <Text style={[styles.statusTitle, { fontSize: short ? 20 : 22 }]}>
+                  You are discoverable
+              </Text>}
+              <Text style={[styles.description, !isLooking && styles.inactiveDescription, { fontSize: short ? 14 : 16, lineHeight: short ? 20 : 24 }, isLooking && styles.activeDescription]}>
+                {isLooking
+                  ? 'You’re visible to nearby users while Line of Sight looks for others who are active nearby.'
+                  : 'You are not currently visible to nearby users. Start looking when you are ready to connect.'}
+              </Text>
+            </View>
           </View>
-          {isLooking && !busy && presenceReady && (
+          {isLooking && !busy && presenceReady && !showSearchStatus && (
             <View style={[styles.nearbySection, { paddingTop: short ? 4 : compact ? 12 : 20 }]} accessibilityLiveRegion="polite">
-              {nearby?.status === 'ready' && nearby.profiles.length === 0 ? <DiscoverySearchState compact={compact} /> : <Text style={[
+              <Text style={[
                 styles.nearbyMessage,
                 { fontSize: compact ? 16 : 18, lineHeight: compact ? 23 : 26 },
                 nearby?.status === 'ready' && nearby.profiles.length > 0 && [
@@ -155,7 +153,7 @@ export default function DiscoveryScreen() {
                 {!nearby ? 'Checking your line of sight...'
                   : nearby.status === 'error' ? 'Could not refresh nearby people. We will try again shortly.'
                   : 'Someone is in your line of sight'}
-              </Text>}
+              </Text>
               {nearby?.status === 'ready' && nearby.profiles.map((profile) => (
                 <NearbyProfileCard key={profile.user_id} profile={profile} onBlocked={() => removeBlockedProfile(profile.user_id)} />
               ))}
@@ -177,7 +175,8 @@ export default function DiscoveryScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
   content: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center', paddingHorizontal: 28 },
-  title: { width: '100%', fontFamily: 'Tangerine-Bold', color: '#202D25', textAlign: 'center', flexShrink: 0 },
+  statusGroup: { width: '100%', alignItems: 'center' },
+  activeDescription: { alignSelf: 'center', maxWidth: 300, fontSize: 15, lineHeight: 22 },
   scroll: { flex: 1, minHeight: 0 },
   main: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 12 },
   badge: {

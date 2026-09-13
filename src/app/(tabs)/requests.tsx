@@ -72,15 +72,21 @@ export default function IncomingRequestsScreen() {
 
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <StatusBar style="dark" />
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={[styles.content, !loading && !error && requests.length === 0 && styles.emptyContent]}>
       <Text accessibilityRole="header" style={styles.title}>Requests</Text>
-      <Text style={styles.secondary}>People who would like to connect with you.</Text>
-      <Pressable accessibilityRole="button" style={styles.link} disabled={busyId !== null}
-        onPress={() => { setLoading(true); void refresh(); }}><Text style={styles.linkText}>Refresh requests</Text></Pressable>
+      <Text style={styles.secondary}>People who want to connect with you.</Text>
       {loading && <Text style={styles.secondary}>Loading requests...</Text>}
       {!!error && <Text accessibilityRole="alert" style={styles.secondary}>{error}</Text>}
       {!!notice && <Text accessibilityLiveRegion="polite" style={styles.secondary}>{notice}</Text>}
-      {!loading && !error && requests.length === 0 && <Text style={styles.secondary}>No connection requests right now.</Text>}
+      {!loading && !error && requests.length === 0 && <View style={styles.emptyState}>
+        <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.connectionMotif}>
+          <View style={styles.personOutline}><View style={styles.outlineHead} /><View style={styles.outlineShoulders} /></View>
+          <View style={styles.connectionLine} />
+          <View style={styles.personOutline}><View style={styles.outlineHead} /><View style={styles.outlineShoulders} /></View>
+        </View>
+        <Text style={styles.emptyTitle}>No requests yet</Text>
+        <Text style={styles.emptyDescription}>When someone nearby wants to connect, their request will appear here.</Text>
+      </View>}
       {requests.map((request) => <View key={request.request_id} style={styles.card}>
         <View style={styles.header}>
           <View style={styles.avatar} accessible={false}><View style={styles.head} /><View style={styles.shoulders} /></View>
@@ -103,7 +109,16 @@ export default function IncomingRequestsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' }, content: { width: '100%', maxWidth: 460, alignSelf: 'center', padding: 28, gap: 14 },
   title: { fontSize: 30, fontWeight: '600', color: '#202D25' }, secondary: { fontSize: 15, lineHeight: 22, color: '#656D66' },
-  link: { minHeight: 44, justifyContent: 'center' }, linkText: { color: '#253D2F', fontSize: 14, fontWeight: '600' },
+  emptyContent: { flexGrow: 1 },
+  emptyState: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40, paddingBottom: 80 },
+  connectionMotif: { width: 112, height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  personOutline: { width: 30, alignItems: 'center', gap: 6 },
+  outlineHead: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, borderColor: '#253D2F' },
+  outlineShoulders: { width: 28, height: 17, borderTopLeftRadius: 14, borderTopRightRadius: 14, borderWidth: 1, borderBottomWidth: 0, borderColor: '#253D2F' },
+  connectionLine: { width: 28, height: 1, backgroundColor: '#B59962' },
+  emptyTitle: { fontSize: 21, lineHeight: 28, fontWeight: '600', color: '#202D25', textAlign: 'center', marginBottom: 10 },
+  emptyDescription: { maxWidth: 280, fontSize: 15, lineHeight: 23, color: '#656D66', textAlign: 'center' },
+  linkText: { color: '#253D2F', fontSize: 14, fontWeight: '600' },
   card: { borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 16, padding: 18, gap: 14 }, header: { flexDirection: 'row', gap: 12, alignItems: 'center' }, identity: { flex: 1 },
   name: { fontSize: 22, fontWeight: '600', color: '#202D25' }, avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 3 },
   head: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#8B988D' }, shoulders: { width: 24, height: 13, borderRadius: 6, backgroundColor: '#8B988D' },

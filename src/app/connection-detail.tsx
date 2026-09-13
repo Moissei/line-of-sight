@@ -3,6 +3,7 @@ import { leaveBlockedChat } from '@/lib/safety-actions';
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SymbolView } from 'expo-symbols';
 import {
   ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable,
   RefreshControl, StyleSheet, Text, TextInput, View,
@@ -167,19 +168,19 @@ export default function ConnectionDetailScreen() {
         <View style={styles.header}>
           <Pressable accessibilityRole="button" style={styles.back}
             onPress={() => router.canGoBack() ? router.back() : router.replace('/connections')}>
+            <SymbolView name={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }} size={18} tintColor="#253D2F" accessible={false} />
             <Text style={styles.link}>Back</Text>
           </Pressable>
           <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>
             {connection?.first_name ?? 'Conversation'}
           </Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Refresh messages"
-            disabled={loading || refreshing} style={styles.back} onPress={() => void refresh()}>
-            <Text style={styles.link}>Refresh</Text>
-          </Pressable>
+          <View style={styles.safetySlot}>
+            {typeof connectionId === 'string' && <SafetyActions
+              target={{ kind: 'connection', id: connectionId }} onBlocked={onBlocked}
+              trigger={<SymbolView name={{ ios: 'ellipsis', android: 'more_horiz', web: 'more_horiz' }} size={22} tintColor="#253D2F" accessible={false} />} />}
+          </View>
         </View>
 
-        {typeof connectionId === 'string' && <SafetyActions
-          target={{ kind: 'connection', id: connectionId }} onBlocked={onBlocked} />}
         {loading ? <View style={styles.center}>
           <ActivityIndicator color="#253D2F" />
           <Text style={styles.text}>Loading messages...</Text>
@@ -201,7 +202,9 @@ export default function ConnectionDetailScreen() {
               <Text style={styles.link}>{loadingEarlier ? 'LOADING...' : 'LOAD EARLIER MESSAGES'}</Text>
             </Pressable> : null}
             ListEmptyComponent={<Text style={styles.empty}>No messages yet. Say hello.</Text>}
-            renderItem={({ item }) => <View style={[styles.bubbleRow, item.sender_is_me && styles.outgoingRow]}>
+            renderItem={({ item, index }) => <View style={[styles.bubbleRow, item.sender_is_me && styles.outgoingRow,
+              { marginTop: index === 0 ? 0 : messages[index - 1].sender_is_me === item.sender_is_me
+                && Math.abs(Date.parse(item.created_at) - Date.parse(messages[index - 1].created_at)) <= 5 * 60 * 1000 ? 4 : 12 }]}>
               <View style={[styles.bubble, item.sender_is_me ? styles.outgoingBubble : styles.incomingBubble]}>
                 <Text style={[styles.body, item.sender_is_me && styles.outgoingBody]}>{item.body}</Text>
                 <Text style={[styles.time, item.sender_is_me && styles.outgoingTime]}>
@@ -216,8 +219,10 @@ export default function ConnectionDetailScreen() {
               placeholder="Write a message..." placeholderTextColor="#858C86" value={draft}
               onChangeText={(value) => { setDraft(value); if (sendError) setSendError(false); }} style={styles.input} />
             <Pressable accessibilityRole="button" accessibilityLabel="Send message" disabled={!canSend}
+              accessibilityState={{ disabled: !canSend, busy: sending }}
               onPress={() => void submit()} style={({ pressed }) => [styles.send, (!canSend || pressed) && styles.sendDisabled]}>
-              <Text style={styles.sendText}>{sending ? 'SENDING...' : 'SEND'}</Text>
+              {sending ? <ActivityIndicator size="small" color="#FEFCF8" />
+                : <SymbolView name={{ ios: 'paperplane.fill', android: 'send', web: 'send' }} size={21} tintColor="#FEFCF8" accessible={false} />}
             </Pressable>
           </View>
         </>}
@@ -229,17 +234,17 @@ export default function ConnectionDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' }, content: { flex: 1, width: '100%', maxWidth: 620, alignSelf: 'center', paddingHorizontal: 18 },
   header: { minHeight: 62, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E1E4DE' },
-  back: { width: 64, minHeight: 44, justifyContent: 'center' }, title: { flex: 1, textAlign: 'center', fontSize: 22, fontWeight: '600', color: '#202D25' },
+  back: { width: 64, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 3 }, safetySlot: { width: 64, alignItems: 'flex-end' }, title: { flex: 1, textAlign: 'center', fontSize: 22, fontWeight: '600', color: '#202D25' },
   link: { fontSize: 13, fontWeight: '700', color: '#253D2F' }, text: { fontSize: 15, lineHeight: 22, color: '#656D66', textAlign: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 }, retry: { minHeight: 44, justifyContent: 'center' },
   errorRow: { paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 }, errorText: { flexShrink: 1, fontSize: 13, color: '#7A3E36' },
-  messageList: { flexGrow: 1, paddingVertical: 14, gap: 8 }, emptyList: { justifyContent: 'center' }, empty: { color: '#656D66', fontSize: 16, textAlign: 'center' },
+  messageList: { flexGrow: 1, paddingVertical: 16 }, emptyList: { justifyContent: 'center' }, empty: { color: '#656D66', fontSize: 16, textAlign: 'center' },
   earlier: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, bubbleRow: { flexDirection: 'row', justifyContent: 'flex-start' }, outgoingRow: { justifyContent: 'flex-end' },
-  bubble: { maxWidth: '82%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, gap: 4 }, incomingBubble: { backgroundColor: '#EBEEE7', borderBottomLeftRadius: 5 },
-  outgoingBubble: { backgroundColor: '#253D2F', borderBottomRightRadius: 5 }, body: { color: '#202D25', fontSize: 16, lineHeight: 22 }, outgoingBody: { color: '#FFFFFF' },
+  bubble: { maxWidth: '78%', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 11, gap: 5 }, incomingBubble: { backgroundColor: '#F1F2EC', borderWidth: 1, borderColor: '#DEE3D9', borderBottomLeftRadius: 6 },
+  outgoingBubble: { backgroundColor: '#253D2F', borderBottomRightRadius: 6 }, body: { color: '#202D25', fontSize: 16, lineHeight: 22 }, outgoingBody: { color: '#FEFCF8' },
   time: { color: '#778079', fontSize: 10, textAlign: 'right' }, outgoingTime: { color: '#D6DDD7' }, sendError: { color: '#7A3E36', fontSize: 13, textAlign: 'center', paddingVertical: 6 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, borderTopWidth: 1, borderTopColor: '#E1E4DE', paddingVertical: 12 },
-  input: { flex: 1, minHeight: 46, maxHeight: 120, borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 11, color: '#202D25', fontSize: 16 },
-  send: { minWidth: 76, minHeight: 46, borderRadius: 14, backgroundColor: '#253D2F', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
-  sendDisabled: { opacity: 0.48 }, sendText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  input: { flex: 1, minHeight: 48, maxHeight: 120, borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12, color: '#202D25', fontSize: 16 },
+  send: { width: 48, height: 48, flexShrink: 0, borderRadius: 24, backgroundColor: '#253D2F', alignItems: 'center', justifyContent: 'center' },
+  sendDisabled: { opacity: 0.48 },
 });

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadConnections, type Connection } from '@/lib/connections';
@@ -34,35 +35,38 @@ export default function ConnectionsScreen() {
     <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor="#253D2F" />}>
       <Text accessibilityRole="header" style={styles.title}>Connections</Text>
       <Text style={styles.secondary}>People you have chosen to connect with.</Text>
-      <Pressable accessibilityRole="button" disabled={loading} style={styles.link} onPress={() => void refresh()}>
-        <Text style={styles.linkText}>Refresh connections</Text>
-      </Pressable>
       {loading && <Text style={styles.secondary}>Loading connections...</Text>}
       {error && <Text accessibilityRole="alert" style={styles.secondary}>Couldn’t load connections. Please try again.</Text>}
       {!loading && !error && connections.length === 0 && <Text style={styles.secondary}>No connections yet.</Text>}
-      {connections.map((connection) => <View key={connection.connection_id} style={styles.card}>
+      {connections.map((connection) => <Pressable key={connection.connection_id}
+        accessibilityRole="button" accessibilityLabel={`Open connection with ${connection.first_name}`}
+        onPress={() => router.push({ pathname: '/connection-detail', params: { connectionId: connection.connection_id } })}
+        style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
         <View style={styles.header}>
           <View style={styles.avatar} accessible={false}><View style={styles.head} /><View style={styles.shoulders} /></View>
-          <View style={styles.identity}><Text style={styles.name}>{connection.first_name}{connection.age !== null ? `, ${connection.age}` : ''}</Text>
-            {!!connection.gender && <Text style={styles.secondary}>{connection.gender}</Text>}</View>
+          <View style={styles.identity}><Text numberOfLines={2} ellipsizeMode="tail" style={styles.name}>{connection.first_name}{connection.age !== null ? `, ${connection.age}` : ''}</Text>
+            {!!connection.bio && <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardSecondary}>{connection.bio}</Text>}
+            {!!connection.gender && <Text numberOfLines={1} ellipsizeMode="tail" style={styles.cardSecondary}>{connection.gender}</Text>}
+            {connection.intents.length > 0 && <View style={styles.intents}>{connection.intents.map((intent, index) => <Text key={index} style={styles.chip}>{intent}</Text>)}</View>}
+            <View style={styles.messageAction}>
+              <SymbolView name={{ ios: 'envelope', android: 'mail_outline', web: 'mail_outline' }} size={16} tintColor="#B59962" accessible={false} />
+              <Text style={styles.messageLabel}>Message</Text>
+            </View>
+          </View>
         </View>
-        {!!connection.bio && <Text style={styles.secondary}>{connection.bio}</Text>}
-        <View style={styles.intents}>{connection.intents.map((intent, index) => <Text key={index} style={styles.chip}>{intent}</Text>)}</View>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Open connection with ${connection.first_name}`}
-          onPress={() => router.push({ pathname: '/connection-detail', params: { connectionId: connection.connection_id } })} style={styles.button}>
-          <Text style={styles.buttonText}>OPEN</Text>
-        </Pressable>
-      </View>)}
+      </Pressable>)}
     </ScrollView>
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' }, content: { width: '100%', maxWidth: 460, alignSelf: 'center', padding: 28, gap: 14 },
   title: { fontSize: 30, fontWeight: '600', color: '#202D25' }, secondary: { fontSize: 15, lineHeight: 22, color: '#656D66' },
-  link: { minHeight: 44, justifyContent: 'center' }, linkText: { color: '#253D2F', fontSize: 14, fontWeight: '600' },
-  card: { borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 16, padding: 18, gap: 14 }, header: { flexDirection: 'row', gap: 12, alignItems: 'center' }, identity: { flex: 1, minWidth: 0 },
-  name: { fontSize: 22, fontWeight: '600', color: '#202D25' }, avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 3 },
-  head: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#8B988D' }, shoulders: { width: 24, height: 13, borderRadius: 6, backgroundColor: '#8B988D' },
-  intents: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, chip: { backgroundColor: '#EBEEE7', color: '#253D2F', padding: 6, borderRadius: 10, fontSize: 12 },
-  button: { minHeight: 48, padding: 12, borderRadius: 12, backgroundColor: '#253D2F', justifyContent: 'center', alignItems: 'center' }, buttonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  card: { backgroundColor: '#FEFCF8', borderWidth: 1, borderColor: '#253D2F', borderRadius: 18, padding: 16 }, header: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' }, identity: { flex: 1, minWidth: 0, minHeight: 114, gap: 4 },
+  name: { fontSize: 21, lineHeight: 27, fontWeight: '600', color: '#202D25' }, avatar: { width: 90, height: 114, flexShrink: 0, borderRadius: 12, overflow: 'hidden', backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  head: { width: 17, height: 17, borderRadius: 9, backgroundColor: '#8B988D' }, shoulders: { width: 34, height: 18, borderRadius: 9, backgroundColor: '#8B988D' },
+  cardSecondary: { fontSize: 14, lineHeight: 20, color: '#656D66' },
+  intents: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingTop: 6 }, chip: { maxWidth: '100%', backgroundColor: '#253D2F', color: '#FEFCF8', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10, fontSize: 12, lineHeight: 17 },
+  messageAction: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
+  messageLabel: { fontSize: 14, fontWeight: '600', color: '#253D2F' },
+  pressed: { opacity: 0.75 },
 });
