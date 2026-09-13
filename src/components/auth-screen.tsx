@@ -3,15 +3,18 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
 import {
   Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, View,
+  StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { authErrorMessage } from '@/lib/auth-errors';
 
 export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
   const router = useRouter();
   const signup = mode === 'signup';
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const loginTopSpace = Math.min(72, Math.max(24, (height - insets.top - insets.bottom) * 0.08));
   const [email, setEmail] = useState('');
   // Passwords exist only in the current form's memory, never in app storage or routes.
   const [password, setPassword] = useState('');
@@ -60,7 +63,9 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
       const { supabase } = await import('@/lib/supabase');
       if (!focused.current) return;
       const { data, error: authError } = signup && !needsConfirmation
-        ? await supabase.auth.signUp({ email: normalizedEmail, password })
+        ? await supabase.auth.signUp({ email: normalizedEmail, password,
+          ...(Platform.OS !== 'web' ? { options: { emailRedirectTo: 'lineofsight://auth-callback' } } : {}),
+        })
         : await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (!focused.current) return;
       if (authError) {
@@ -86,7 +91,7 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
     }
   }
 
-  const buttonLabel = needsConfirmation ? 'LOG IN & CONTINUE' : signup ? 'CREATE ACCOUNT' : 'LOG IN';
+  const buttonLabel = needsConfirmation ? 'CONTINUE' : signup ? 'CREATE ACCOUNT' : 'LOG IN';
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -96,16 +101,16 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
           <Pressable accessibilityRole="button" accessibilityLabel="Back to welcome" onPress={() => router.replace('/')} style={styles.back}>
             <Text style={styles.link}>Back to welcome</Text>
           </Pressable>
-          <View style={styles.heading}>
+          <View style={[styles.heading, signup ? styles.signupHeading : [styles.loginHeading, { marginTop: loginTopSpace }]]}>
             <Text accessibilityRole="header" style={styles.title}>{signup ? 'Create your account' : 'Welcome back'}</Text>
-            <Text style={styles.subtitle}>{signup ? 'Your next connection starts here.' : 'Log in to Line of Sight.'}</Text>
+            <Text style={styles.subtitle}>{signup ? 'Be ready when the moment happens.' : 'Pick up where you left off.'}</Text>
           </View>
           {needsConfirmation && (
             <Text accessibilityLiveRegion="polite" style={styles.notice}>
-              Check your inbox for a confirmation link. If confirmation is needed, open the link, then return here and enter your password to continue your profile. Already have an account? You can log in instead.
+              Check your inbox for a confirmation email, then return here to continue.
             </Text>
           )}
-          <View style={styles.form}>
+          <View style={[styles.form, !signup && styles.loginForm]}>
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
               <TextInput accessibilityLabel="Email" value={email} onChangeText={setEmail} editable={!busy && !needsConfirmation}
@@ -131,13 +136,16 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
             )}
             {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>}
           </View>
-          <View style={styles.footer}>
+          <View style={[styles.footer, signup ? styles.signupFooter : styles.loginFooter]}>
             <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy, busy }} disabled={busy}
               onPress={() => void submit()} style={({ pressed }) => [styles.button, (pressed || busy) && styles.pressed]}>
               <Text style={styles.buttonLabel}>{busy ? 'PLEASE WAIT...' : buttonLabel}</Text>
             </Pressable>
             {signup && <Pressable accessibilityRole="button" onPress={() => router.replace('/login')} style={styles.secondary}>
               <Text style={styles.link}>Already have an account? Log in</Text>
+            </Pressable>}
+            {!signup && <Pressable accessibilityRole="button" onPress={() => router.replace('/sign-up')} style={styles.secondary}>
+              <Text style={styles.link}>New to Line of Sight? Create account</Text>
             </Pressable>}
           </View>
         </ScrollView>
@@ -152,9 +160,12 @@ const styles = StyleSheet.create({
   back: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' },
   link: { fontSize: 14, color: '#253D2F', fontWeight: '600', textAlign: 'center' },
   heading: { gap: 8, marginTop: 24, marginBottom: 28 },
+  signupHeading: { marginTop: 20, marginBottom: 24 },
+  loginHeading: { gap: 12, marginBottom: 32 },
+  loginForm: { gap: 28 },
   title: { fontSize: 30, fontWeight: '600', letterSpacing: -0.8, color: '#202D25' },
   subtitle: { fontSize: 15, lineHeight: 22, color: '#656D66' },
-  notice: { fontSize: 15, lineHeight: 22, color: '#253D2F', marginBottom: 24 },
+  notice: { fontSize: 15, lineHeight: 22, color: '#253D2F', marginBottom: 16 },
   form: { gap: 20 },
   field: { gap: 8 },
   label: { fontSize: 14, fontWeight: '600', color: '#202D25' },
@@ -162,6 +173,8 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, lineHeight: 18, color: '#656D66' },
   error: { fontSize: 14, lineHeight: 22, color: '#9B3434' },
   footer: { marginTop: 'auto', paddingTop: 32, gap: 12 },
+  signupFooter: { marginTop: 0, paddingTop: 24, gap: 16 },
+  loginFooter: { marginTop: 0, paddingTop: 32, gap: 16 },
   button: { minHeight: 58, paddingHorizontal: 24, paddingVertical: 18, borderRadius: 16, backgroundColor: '#253D2F', alignItems: 'center', justifyContent: 'center' },
   buttonLabel: { fontSize: 14, fontWeight: '700', letterSpacing: 1.5, color: '#FFFFFF', textAlign: 'center' },
   secondary: { minHeight: 44, justifyContent: 'center' },

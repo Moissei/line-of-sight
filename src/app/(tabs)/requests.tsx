@@ -1,12 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadIncomingRequests, respondToRequest, type IncomingRequest, type RequestResponse } from '@/lib/incoming-requests';
 
 export default function IncomingRequestsScreen() {
-  const router = useRouter();
   const [requests, setRequests] = useState<IncomingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -71,13 +70,9 @@ export default function IncomingRequestsScreen() {
     }
   }
 
-  return <SafeAreaView style={styles.screen}>
+  return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <StatusBar style="dark" />
     <ScrollView contentContainerStyle={styles.content}>
-      <Pressable accessibilityRole="button" style={styles.link} disabled={busyId !== null}
-        onPress={() => router.canGoBack() ? router.back() : router.replace('/discovery')}>
-        <Text style={styles.linkText}>Back to Discovery</Text>
-      </Pressable>
       <Text accessibilityRole="header" style={styles.title}>Requests</Text>
       <Text style={styles.secondary}>People who would like to connect with you.</Text>
       <Pressable accessibilityRole="button" style={styles.link} disabled={busyId !== null}

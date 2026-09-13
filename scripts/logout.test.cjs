@@ -34,7 +34,7 @@ function fixture({ fail = false, presenceFails = false, cleanupFails = false } =
   const native=Object.fromEntries(['Modal','Pressable','Text','View','ScrollView'].map(x=>[x,x]));native.StyleSheet={create:x=>x};
   const jsx=(type,props)=>({type,props});
   const {default:Screen}=load('src/app/account.tsx', { react, 'react/jsx-runtime': { jsx,jsxs:jsx },
-    'expo-router': {useRouter:()=>({back(){}})}, 'react-native':native,
+    'expo-symbols': {SymbolView:'SymbolView'}, 'expo-router': {useRouter:()=>({back(){}})}, 'react-native':native,
     'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'}, '@/lib/logout':helper, '@/lib/safety-actions':locks,
     '@/lib/delete-account': {} });
   function render(){ i=0;tree=Screen(); }
@@ -62,9 +62,9 @@ test('auth change resets local provider/navigation and protects every authentica
   const source=fs.readFileSync('src/app/_layout.tsx','utf8');
   assert.match(source,/event === 'SIGNED_OUT'/);assert.match(source,/<OnboardingProvider key=\{auth.generation\}>/);
   const protectedBlock=source.split('<Stack.Protected guard={auth.signedIn}>')[1].split('</Stack.Protected>')[0];
-  for(const route of ['discovery','account','connections','connection-detail','requests','edit-profile','create-profile','intentions']) assert.ok(protectedBlock.includes(`name="${route}"`));
+  for(const route of ['(tabs)','account','connection-detail','create-profile','intentions']) assert.ok(protectedBlock.includes(`name="${route}"`));
   assert.match(source,/generation: current.generation \+ \(reset \? 1 : 0\)/);
-  const discovery=fs.readFileSync('src/app/discovery.tsx','utf8');assert.match(discovery,/stopPolling.current\?\.\(\)/);assert.match(discovery,/setNearby\(null\)/);
+  const discovery=fs.readFileSync('src/app/(tabs)/discovery.tsx','utf8');assert.match(discovery,/stopPolling.current\?\.\(\)/);assert.match(discovery,/setNearby\(null\)/);
   const realtime=fs.readFileSync('src/lib/message-realtime.ts','utf8');assert.match(realtime,/if \(stopped\) return/);assert.match(realtime,/controller|abort.abort\(\)/);
 });
 test('SIGNED_OUT changes the real layout guard and remount key; token refresh preserves state', async () => {

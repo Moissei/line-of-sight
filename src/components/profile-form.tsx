@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
+import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { SymbolView } from 'expo-symbols';
+import { useContext, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -17,8 +19,9 @@ import { useOnboarding } from '@/components/onboarding-provider';
 import { validateProfile, saveProfile, profileSaveError, PROFILE_INTENTS } from '@/lib/profile';
 import { ProfilePhotoSlots } from '@/components/profile-photo-slots';
 
-export function ProfileForm({ editing = false }: { editing?: boolean }) {
+export function ProfileForm({ editing = false, tabScreen = false }: { editing?: boolean; tabScreen?: boolean }) {
   const router = useRouter();
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
   const { draft, setDraft } = useOnboarding();
   const { firstName, dateOfBirth, gender, bio } = draft;
   const setFirstName = (value: string) => setDraft((previous) => ({ ...previous, firstName: value }));
@@ -40,32 +43,40 @@ export function ProfileForm({ editing = false }: { editing?: boolean }) {
     setSaving(true);
     try {
       await saveProfile(draft, true);
-      if (router.canGoBack()) router.back(); else router.replace('/discovery');
+      if (tabScreen) router.navigate('/discovery');
+      else if (router.canGoBack()) router.back(); else router.replace('/discovery');
     } catch (failure) { setError(profileSaveError(failure)); }
     finally { inFlight.current = false; setSaving(false); }
   }
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={tabScreen ? ['top', 'left', 'right'] : ['top', 'bottom', 'left', 'right']} style={styles.screen}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, tabScreen && { paddingBottom: tabBarHeight + 24 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag">
-          <Pressable
+          {!tabScreen && <Pressable
             accessibilityRole="button"
             accessibilityLabel={editing ? "Back to discovery" : "Back to welcome"}
             disabled={saving}
             onPress={() => router.canGoBack() ? router.back() : router.replace(editing ? '/discovery' : '/')}
             style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
             <Text style={styles.backLabel}>Back</Text>
-          </Pressable>
+          </Pressable>}
 
           <View style={styles.heading}>
-            <Text accessibilityRole="header" style={styles.title}>{editing ? 'Edit profile' : 'Create your profile'}</Text>
+            <View style={styles.headerRow}>
+              <Text accessibilityRole="header" style={[styles.title, { flex: 1 }]}>{editing ? 'Edit profile' : 'Create your profile'}</Text>
+              {tabScreen && <Pressable accessibilityRole="button" accessibilityLabel="Account settings"
+                disabled={saving} onPress={() => router.push('/account')}
+                style={({ pressed }) => [styles.settings, pressed && styles.pressed]}>
+                <SymbolView name={{ ios: 'gearshape', android: 'settings', web: 'settings' }} size={22} weight="regular" tintColor="#253D2F" />
+              </Pressable>}
+            </View>
             <Text style={styles.subtitle}>{editing ? 'Keep your profile up to date.' : 'A little about you. A chance to connect.'}</Text>
           </View>
 
@@ -104,7 +115,25 @@ export function ProfileForm({ editing = false }: { editing?: boolean }) {
 
             <View style={styles.field}>
               <Text style={styles.label}>Gender</Text>
-              <TextInput
+              {editing ? <View style={styles.field}>
+                <View style={styles.genderOptions}>
+                  {(['Male', 'Female'] as const).map((option) => <Pressable key={option}
+                    accessibilityRole="radio" accessibilityLabel={option}
+                    accessibilityState={{ checked: gender === option, disabled: saving }} disabled={saving}
+                    onPress={() => setGender(option)}
+                    style={styles.genderOption}>
+                    <Text accessible={false} style={[styles.genderSymbol, {
+                      color: option === 'Male' ? (gender === option ? '#526F88' : '#8296A7') : (gender === option ? '#956575' : '#B397A1'),
+                    }]}>{option === 'Male' ? '\u2642' : '\u2640'}</Text>
+                    <Text style={[styles.genderLabel, gender === option && { fontWeight: '600' }]}>{option}</Text>
+                    <View accessible={false} style={[styles.genderIndicator, {
+                      backgroundColor: gender === option ? (option === 'Male' ? '#526F88' : '#956575') : 'transparent',
+                    }]} />
+                  </Pressable>)}
+                </View>
+                {!!gender && gender !== 'Male' && gender !== 'Female' &&
+                  <Text style={styles.hint}>Your saved value is unchanged until you select an option.</Text>}
+              </View> : <TextInput
                 accessibilityLabel="Gender"
                 placeholder="How you describe yourself"
                 placeholderTextColor="#7A817A"
@@ -113,15 +142,15 @@ export function ProfileForm({ editing = false }: { editing?: boolean }) {
                 onChangeText={setGender}
                 maxLength={60}
                 style={styles.input}
-              />
+              />}
             </View>
 
             <ProfilePhotoSlots onBusy={setPicking} editing={editing} />
 
             <View style={styles.field}>
-              <Text style={styles.label}>Short bio</Text>
+              <Text style={styles.label}>{editing ? 'A little about me' : 'Short bio'}</Text>
               <TextInput
-                accessibilityLabel="Short bio"
+                accessibilityLabel={editing ? 'A little about me' : 'Short bio'}
                 placeholder="A little about what makes you, you."
                 placeholderTextColor="#7A817A"
                 value={bio}
@@ -139,8 +168,9 @@ export function ProfileForm({ editing = false }: { editing?: boolean }) {
                 accessibilityState={{ checked: draft.intents.includes(intent) }}
                 onPress={() => setDraft((previous) => ({ ...previous, intents: previous.intents.includes(intent)
                   ? previous.intents.filter((item) => item !== intent) : [...previous.intents, intent] }))}
-                style={[styles.input, draft.intents.includes(intent) && { backgroundColor: '#E8EBE5' }]}>
-                <Text style={styles.label}>{draft.intents.includes(intent) ? '? ' : ''}{intent}</Text>
+                style={[styles.intentOption, draft.intents.includes(intent) && styles.intentSelected]}>
+                <Text style={styles.intentLabel}>{intent}</Text>
+                {draft.intents.includes(intent) && <SymbolView name={{ ios: 'checkmark', android: 'check', web: 'check' }} size={16} tintColor="#253D2F" />}
               </Pressable>)}
             </View>}
           </View>
@@ -164,7 +194,7 @@ export function ProfileForm({ editing = false }: { editing?: boolean }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, minHeight: 0 },
   content: {
     flexGrow: 1,
     width: '100%',
@@ -177,10 +207,20 @@ const styles = StyleSheet.create({
   back: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center', paddingRight: 20 },
   backLabel: { fontSize: 14, color: '#253D2F', fontWeight: '600' },
   heading: { gap: 8, marginTop: 8, marginBottom: 24 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settings: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 30, fontWeight: '600', letterSpacing: -0.8, color: '#202D25' },
   subtitle: { fontSize: 15, lineHeight: 22, color: '#656D66' },
   form: { gap: 18 },
   field: { gap: 8 },
+  genderOptions: { flexDirection: 'row', flexWrap: 'wrap', alignSelf: 'flex-start', gap: 24 },
+  genderOption: { minWidth: 64, minHeight: 80, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  genderSymbol: { fontSize: 43, lineHeight: 49, fontWeight: '400', textAlign: 'center', includeFontPadding: false },
+  genderLabel: { fontSize: 14, fontWeight: '400', color: '#202D25' },
+  genderIndicator: { width: 20, height: 2 },
+  intentOption: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: '#C9CEC7', backgroundColor: '#FEFCF8', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  intentSelected: { backgroundColor: '#E8EEE5', borderColor: '#253D2F' },
+  intentLabel: { fontSize: 14, fontWeight: '600', color: '#253D2F' },
   label: { fontSize: 14, fontWeight: '600', color: '#202D25' },
   input: {
     minHeight: 48,

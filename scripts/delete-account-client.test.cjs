@@ -60,7 +60,7 @@ function fixture() {
   const react={useState(value){const n=index++;if(!(n in state))state[n]=value;return[state[n],v=>state[n]=v];},useRef(value){const n=index++;return state[n]??(state[n]={current:value});}};
   const jsx=(type,props)=>({type,props});
   const native=Object.fromEntries(['Modal','Pressable','Text','View','ScrollView'].map(x=>[x,x]));native.StyleSheet={create:x=>x};
-  const {default:Screen}=load('src/app/account.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':native,'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'},'expo-router':{useRouter:()=>({back(){}})},'@/lib/logout':{},'@/lib/safety-actions':load('src/lib/safety-actions.ts',{}),'@/lib/delete-account':helper});
+  const {default:Screen}=load('src/app/account.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':native,'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'},'expo-symbols':{SymbolView:'SymbolView'},'expo-router':{useRouter:()=>({back(){}})},'@/lib/logout':{},'@/lib/safety-actions':load('src/lib/safety-actions.ts',{}),'@/lib/delete-account':helper});
   function render(){index=0;tree=Screen();}
   function nodes(x){if(!x||typeof x!=='object')return[];if(Array.isArray(x))return x.flatMap(nodes);if(x.type==='Modal'&&!x.props.visible)return[];return[x,...nodes(x.props?.children)];}
   function text(x){if(typeof x==='string')return x;if(Array.isArray(x))return x.map(text).join('');return x?.props?text(x.props.children):'';}

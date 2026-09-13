@@ -60,15 +60,13 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="login" />
+          <Stack.Screen name="auth-callback" />
           <Stack.Screen name="sign-up" />
           <Stack.Protected guard={auth.signedIn}>
-            <Stack.Screen name="discovery" />
+            <Stack.Screen name="(tabs)" />
             <Stack.Screen name="account" />
             <Stack.Screen name="create-profile" />
-            <Stack.Screen name="edit-profile" />
             <Stack.Screen name="intentions" />
-            <Stack.Screen name="requests" />
-            <Stack.Screen name="connections" />
             <Stack.Screen name="connection-detail" />
             <Stack.Screen name="explore" />
           </Stack.Protected>

@@ -1,10 +1,31 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const [reveal] = useState(() => new Animated.Value(0));
+  const [titleLift, setTitleLift] = useState(0);
+  useEffect(() => {
+    let disposed = false;
+    let preferenceChanged = false;
+    const animation = Animated.timing(reveal, {
+      toValue: 1, duration: 1800, easing: Easing.inOut(Easing.linear), useNativeDriver: true,
+    });
+    const showImmediately = () => { animation.stop(); reveal.setValue(1); };
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', enabled => {
+      preferenceChanged = true;
+      if (enabled) showImmediately();
+    });
+    void AccessibilityInfo.isReduceMotionEnabled().then(enabled => {
+      if (disposed) return;
+      if (enabled || preferenceChanged) showImmediately();
+      else animation.start();
+    }).catch(() => { if (!disposed) showImmediately(); });
+    return () => { disposed = true; animation.stop(); subscription.remove(); };
+  }, [reveal]);
   const { width, height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const availableHeight = height - insets.top - insets.bottom;
@@ -17,11 +38,16 @@ export default function WelcomeScreen() {
   const taglineLineHeight = short ? 20 : 26;
   const buttonHeight = compact ? 48 : 58;
   const spacing = compact ? 8 : 16;
+  // Reserve breathing room above the bottom safe area. The shorter hero region
+  // also brings the centered brand group upward without fixed device offsets.
+  const bottomSpacing = short ? spacing : compact
+    ? Math.min(32, availableHeight * 0.06)
+    : Math.min(120, availableHeight * 0.16);
   const eyeGap = compact ? 4 : 8;
   const eyeFrameRatio = 0.245;
   // Reserve room for text and both actions before sizing the decorative artwork.
   const imageHeightBudget = Math.max(0, availableHeight - (
-    2 * spacing + 2 * buttonHeight + 12 + 2 * spacing + eyeGap +
+    spacing + bottomSpacing + 2 * buttonHeight + 12 + 2 * spacing + eyeGap +
     titleSize * 1.15 * fontScale + 2 * taglineLineHeight * fontScale
   ));
   const imageWidth = Math.max(0, Math.min(
@@ -29,12 +55,33 @@ export default function WelcomeScreen() {
     520,
     imageHeightBudget / eyeFrameRatio,
   ));
+  // Use spare hero space without reflowing it; reduce the lift on short screens.
+  const actionsLift = Math.min(50, Math.max(0, (imageHeightBudget - imageWidth * eyeFrameRatio) / 2));
 
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
-      <View style={[styles.content, { paddingVertical: spacing }]}>
+      <View style={[styles.content, { paddingTop: spacing, paddingBottom: bottomSpacing }]}>
         <View style={styles.hero}>
+          <View
+            onLayout={({ nativeEvent }) => setTitleLift(Math.min(88, Math.max(0, nativeEvent.layout.y)))}
+            style={[styles.titleFrame, { width: titleWidth, marginBottom: eyeGap, transform: [{ translateY: -titleLift }] }]}>
+            <Text
+              accessibilityRole="header"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
+              style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.15 }]}>
+              Line of Sight
+            </Text>
+            {/* Slide a cream mask over the intact script, revealing strokes
+                continuously rather than adding individual characters. */}
+            <Animated.View pointerEvents="none" accessible={false} accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[styles.titleMask, { transform: [{ translateX: reveal.interpolate({
+                inputRange: [0, 1], outputRange: [0, titleWidth],
+              }) }] }]} />
+          </View>
           <View style={[styles.eyeFrame, { width: imageWidth, height: imageWidth * eyeFrameRatio, marginBottom: eyeGap }]}>
             <Image
               source={require('@/assets/images/eyechico.png')}
@@ -49,20 +96,12 @@ export default function WelcomeScreen() {
               importantForAccessibility="no-hide-descendants"
             />
           </View>
-          <Text
-            accessibilityRole="header"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.5}
-            style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.15 }]}>
-            Line of Sight
-          </Text>
-          <Text style={[styles.tagline, { fontSize: taglineSize, lineHeight: taglineLineHeight, marginTop: spacing }]}>
-            You noticed them. Maybe they noticed you too.
+          <Text style={[styles.tagline, { fontSize: taglineSize, lineHeight: taglineLineHeight, marginTop: eyeGap }]}>
+            Don&apos;t let the moment pass.
           </Text>
         </View>
 
-        <View style={[styles.actions, { paddingTop: spacing }]}>
+        <View style={[styles.actions, { paddingTop: spacing, transform: [{ translateY: -actionsLift }] }]}>
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/sign-up')}
@@ -82,6 +121,8 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  titleFrame: { overflow: 'hidden', flexShrink: 0 },
+  titleMask: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#FEFCF8' },
   // Sampled from the PNG's pale cream edges to minimize the rectangular boundary.
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
   content: {

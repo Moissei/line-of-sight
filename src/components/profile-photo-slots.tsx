@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { SymbolView } from 'expo-symbols';
 import { useFocusEffect } from 'expo-router';
 import { useOnboarding } from './onboarding-provider';
 import { validatePhoto } from '@/lib/profile-photo';
@@ -88,7 +89,7 @@ export function ProfilePhotoSlots({ onBusy, editing = false }: { onBusy: (busy: 
         return { ...previous, photos };
       });
     } catch {
-      if (mounted.current) setError('Photo removal did not finish. Please tap Remove again to retry.');
+      if (mounted.current) setError('Photo removal did not finish. Please try removing it again.');
     } finally { locked.current = false; if (mounted.current) setBusy(false); }
   }
 
@@ -99,29 +100,39 @@ export function ProfilePhotoSlots({ onBusy, editing = false }: { onBusy: (busy: 
       const exists = !!selected || remote.includes(position);
       const uri = selected?.uri ?? (remote.includes(position) ? previews[position] : undefined);
       return <View key={position} style={styles.slot}>
-        <Text style={styles.label}>{position === 1 ? '1 · Primary' : `Slot ${position}`}</Text>
+        {!editing && <Text style={styles.label}>{position === 1 ? '1 · Primary' : `Slot ${position}`}</Text>}
+        <View>
         <Pressable disabled={busy || !ready} accessibilityRole="button"
           accessibilityLabel={`${exists ? 'Replace' : 'Add'} photo in slot ${position}${position === 1 ? ', Primary' : ''}`}
           onPress={() => void choose(position)} style={styles.tile}>
           {uri ? <Image source={{ uri }} style={styles.image} resizeMode="cover" accessibilityLabel={`Photo ${position}`}
             onError={() => setError('A preview could not load. Tap Refresh photos to retry.')} />
-            : <Text style={styles.placeholder}>{exists ? 'Photo saved' : '+'}</Text>}
+            : <Text style={styles.placeholder}>{exists ? 'Photo saved' : editing ? '+ Add' : '+'}</Text>}
+          {editing && position === 1 && <View pointerEvents="none" style={styles.primaryBadge}>
+            <Text style={styles.primaryLabel}>PRIMARY</Text>
+          </View>}
         </Pressable>
-        <Pressable disabled={busy || !ready} accessibilityRole="button" onPress={() => void choose(position)} style={styles.action}>
+        {editing && exists && <Pressable disabled={busy || !ready} accessibilityRole="button"
+          accessibilityLabel={`Remove photo ${position}`} accessibilityState={{ disabled: busy || !ready }}
+          onPress={() => void remove(position)} style={styles.removeTarget}>
+          <View style={styles.removeCircle}><SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={14} tintColor="#253D2F" /></View>
+        </Pressable>}
+        </View>
+        {!editing && <Pressable disabled={busy || !ready} accessibilityRole="button" onPress={() => void choose(position)} style={styles.action}>
           <Text style={styles.actionText}>{exists ? 'Replace' : 'Add photo'}</Text>
-        </Pressable>
-        {exists && <Pressable disabled={busy || !ready} accessibilityRole="button" accessibilityLabel={`Remove photo ${position}`}
+        </Pressable>}
+        {!editing && exists && <Pressable disabled={busy || !ready} accessibilityRole="button" accessibilityLabel={`Remove photo ${position}`}
           onPress={() => void remove(position)} style={styles.action}><Text style={styles.hint}>Remove</Text></Pressable>}
       </View>;
     })}</View>
-    <Text style={styles.hint}>Optional. Up to 3 photos, 5 MiB each. JPEG, PNG or WebP. Slot 1 is always Primary.</Text>
-    <Text style={styles.hint}>{editing ? 'New photos save with SAVE CHANGES.' : 'New photos save when you finish your profile.'} Removing a saved photo takes effect now.</Text>
+    {!editing && <Text style={styles.hint}>Optional. Up to 3 photos, 5 MiB each. JPEG, PNG or WebP. Slot 1 is always Primary.</Text>}
+    {!editing && <Text style={styles.hint}>New photos save when you finish your profile. Removing a saved photo takes effect now.</Text>}
     {busy && <Text style={styles.hint}>Updating photos...</Text>}
     {!ready && !error && <Text style={styles.hint}>Loading photos...</Text>}
     {!!error && <Text accessibilityRole="alert" style={styles.hint}>{error}</Text>}
-    <Pressable disabled={busy} accessibilityRole="button" onPress={() => void load()} style={styles.action}>
+    {(!editing || !!error) && <Pressable disabled={busy} accessibilityRole="button" onPress={() => void load()} style={styles.action}>
       <Text style={styles.actionText}>Refresh photos</Text>
-    </Pressable>
+    </Pressable>}
   </View>;
 }
 const styles = StyleSheet.create({
@@ -131,4 +142,8 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' }, placeholder: { color: '#656D66', fontSize: 18, textAlign: 'center' },
   action: { minHeight: 44, justifyContent: 'center' }, actionText: { color: '#253D2F', fontSize: 13, fontWeight: '600' },
   hint: { color: '#656D66', fontSize: 12, lineHeight: 18 },
+  primaryBadge: { position: 'absolute', bottom: 6, left: 6, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 3, backgroundColor: 'rgba(254, 252, 248, 0.92)' },
+  primaryLabel: { color: '#253D2F', fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
+  removeTarget: { position: 'absolute', top: 0, right: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  removeCircle: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#FEFCF8', borderWidth: 1, borderColor: '#C9CEC7', alignItems: 'center', justifyContent: 'center' },
 });

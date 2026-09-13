@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
@@ -41,18 +42,20 @@ function EditProfileContent() {
     void load();
     return () => { cancelled = true; };
   }, [attempt, setDraft]);
-  if (loadedOwner && draft.photoOwner === loadedOwner) return <ProfileForm editing />;
-  return <SafeAreaView style={styles.screen}><View style={styles.content}>
-    <Text style={styles.title}>Edit profile</Text>
+  if (loadedOwner && draft.photoOwner === loadedOwner) return <ProfileForm editing tabScreen />;
+  return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}><View style={styles.content}>
+    <View style={styles.headerRow}>
+      <Text style={[styles.title, { flex: 1 }]}>Edit profile</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Account settings" style={styles.settings} onPress={() => router.push('/account')}>
+        <SymbolView name={{ ios: 'gearshape', android: 'settings', web: 'settings' }} size={22} weight="regular" tintColor="#253D2F" />
+      </Pressable>
+    </View>
     <Text accessibilityRole={error ? 'alert' : undefined} style={styles.text}>
       {error ? 'We could not load your profile. Please check your connection and try again.' : 'Loading your profile...'}
     </Text>
     {error && <Pressable accessibilityRole="button" style={styles.button} onPress={() => { setError(false); setAttempt((value) => value + 1); }}>
       <Text style={styles.text}>Try again</Text>
     </Pressable>}
-    <Pressable accessibilityRole="button" style={styles.button} onPress={() => router.canGoBack() ? router.back() : router.replace('/discovery')}>
-      <Text style={styles.text}>Back to Discovery</Text>
-    </Pressable>
   </View></SafeAreaView>;
 }
 const styles = StyleSheet.create({
@@ -61,4 +64,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontWeight: '600', color: '#202D25' },
   text: { fontSize: 15, lineHeight: 22, color: '#253D2F' },
   button: { minHeight: 44, justifyContent: 'center' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settings: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

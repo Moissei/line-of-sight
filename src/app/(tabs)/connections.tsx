@@ -29,12 +29,9 @@ export default function ConnectionsScreen() {
     return () => { clearTimeout(timer); controller.current?.abort(); setConnections([]); };
   }, [refresh]));
 
-  return <SafeAreaView style={styles.screen}>
+  return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <StatusBar style="dark" />
     <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor="#253D2F" />}>
-      <Pressable accessibilityRole="button" style={styles.link} onPress={() => router.canGoBack() ? router.back() : router.replace('/discovery')}>
-        <Text style={styles.linkText}>Back to Discovery</Text>
-      </Pressable>
       <Text accessibilityRole="header" style={styles.title}>Connections</Text>
       <Text style={styles.secondary}>People you have chosen to connect with.</Text>
       <Pressable accessibilityRole="button" disabled={loading} style={styles.link} onPress={() => void refresh()}>

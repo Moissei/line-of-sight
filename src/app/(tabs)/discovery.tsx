@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -7,9 +7,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { presenceErrorMessage, readDiscoveryPresence, setDiscoveryPresence } from '@/lib/discovery-presence';
 import { NearbyResult, pollNearbyDiscovery } from '@/lib/nearby-discovery';
 import { NearbyProfileCard } from '@/components/nearby-profile-card';
+import { DiscoverySearchState } from '@/components/discovery-search-state';
+import { DiscoveryWindHeadline } from '@/components/discovery-wind-headline';
 
 export default function DiscoveryScreen() {
-  const router = useRouter();
   // Only the START LOOKING press may create/reactivate a session.
   // Never derive discoverability from installation, onboarding, or profile intentions.
   const [isLooking, setIsLooking] = useState(false);
@@ -95,78 +96,7 @@ export default function DiscoveryScreen() {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.screen}>
-      <StatusBar style="dark" />
-      <View style={[styles.content, { paddingVertical: spacing }]}>
-        <View style={styles.topControls}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Account settings" disabled={busy}
-          onPress={() => router.push('/account')} style={styles.profileControl}>
-          <Text style={styles.profileLabel}>ACCOUNT</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Connections" disabled={busy}
-          onPress={() => router.push('/connections')} style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
-          <Text style={styles.profileLabel}>CONNECTIONS</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Incoming connection requests" disabled={busy}
-          onPress={() => router.push('/requests')} style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
-          <Text style={styles.profileLabel}>REQUESTS</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Edit profile" disabled={busy}
-          onPress={() => router.push('/edit-profile')}
-          style={({ pressed }) => [styles.profileControl, pressed && styles.pressed]}>
-          <Text style={styles.profileLabel}>PROFILE</Text>
-        </Pressable>
-        </View>
-        <Text
-          accessibilityRole="header"
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.5}
-          style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.15 }]}>
-          Line of Sight
-        </Text>
-
-        <ScrollView style={styles.scroll} contentContainerStyle={[styles.main, { gap: spacing }]}>
-          <View style={[styles.badge, isLooking && styles.activeBadge]}>
-            <View style={[styles.dot, isLooking && styles.activeDot]} />
-            <Text style={[styles.badgeLabel, isLooking && styles.activeLabel]}>
-              {isLooking ? 'SESSION ACTIVE' : 'SESSION INACTIVE'}
-            </Text>
-          </View>
-
-          <View style={styles.message} accessibilityLiveRegion="polite" accessible>
-            <Text style={[styles.statusTitle, { fontSize: short ? 20 : isLooking ? 22 : 28 }]}>
-              {isLooking ? 'You are discoverable' : 'On your own terms'}
-            </Text>
-            <Text style={[styles.description, { fontSize: short ? 14 : 16, lineHeight: short ? 20 : 24 }]}>
-              {isLooking
-                ? 'You are currently visible to nearby users. Stop looking whenever you like.'
-                : 'You are not currently visible to nearby users. Start looking when you are ready to connect.'}
-            </Text>
-          </View>
-          {isLooking && !busy && presenceReady && (
-            <View style={[styles.nearbySection, { paddingTop: short ? 4 : compact ? 12 : 20 }]} accessibilityLiveRegion="polite">
-              <Text style={[
-                styles.nearbyMessage,
-                { fontSize: compact ? 16 : 18, lineHeight: compact ? 23 : 26 },
-                nearby?.status === 'ready' && nearby.profiles.length > 0 && [
-                  styles.nearbyFound,
-                  { fontSize: compact ? 18 : 20, lineHeight: compact ? 25 : 28 },
-                ],
-              ]}>
-                {!nearby ? 'Checking your line of sight...'
-                  : nearby.status === 'error' ? 'Could not refresh nearby people. We will try again shortly.'
-                  : nearby.profiles.length === 0 ? 'No one in your line of sight right now.'
-                  : 'Someone is in your line of sight'}
-              </Text>
-              {nearby?.status === 'ready' && nearby.profiles.map((profile) => (
-                <NearbyProfileCard key={profile.user_id} profile={profile} onBlocked={() => removeBlockedProfile(profile.user_id)} />
-              ))}
-            </View>
-          )}
-        </ScrollView>
-
+  const actionArea = (
         <View style={[styles.footer, { gap: short ? 8 : 16 }]}>
           {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.previewNote}>{error}</Text>}
           <Pressable
@@ -179,15 +109,72 @@ export default function DiscoveryScreen() {
             <Text style={styles.buttonLabel}>{isLooking ? 'STOP LOOKING' : 'START LOOKING'}</Text>
           </Pressable>
         </View>
+  );
+
+  return (
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
+      <StatusBar style="dark" />
+      <View style={[styles.content, { paddingVertical: spacing }]}>
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+          style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.15, transform: [{ translateY: short ? 20 : 45 }] }]}>
+          Line of Sight
+        </Text>
+
+        <ScrollView style={styles.scroll} contentContainerStyle={[styles.main, { gap: spacing }, !isLooking && { paddingVertical: compact ? 24 : 48 }]}>
+          <View style={[styles.badge, isLooking ? styles.activeBadge : styles.inactiveBadge]}>
+            <View style={[styles.dot, isLooking && styles.activeDot]} />
+            <Text style={[styles.badgeLabel, isLooking && styles.activeLabel]}>
+              {isLooking ? 'SESSION ACTIVE' : 'SESSION INACTIVE'}
+            </Text>
+          </View>
+
+          <View style={[styles.message, !isLooking && styles.inactiveMessage]} accessibilityLiveRegion="polite" accessible>
+            {isLooking ? <Text style={[styles.statusTitle, { fontSize: short ? 20 : 22 }]}>
+              You are discoverable
+            </Text> : <DiscoveryWindHeadline fontSize={short ? 20 : 30} />}
+            <Text style={[styles.description, !isLooking && styles.inactiveDescription, { fontSize: short ? 14 : 16, lineHeight: short ? 20 : 24 }]}>
+              {isLooking
+                ? 'You are currently visible to nearby users. Stop looking whenever you like.'
+                : 'You are not currently visible to nearby users. Start looking when you are ready to connect.'}
+            </Text>
+          </View>
+          {isLooking && !busy && presenceReady && (
+            <View style={[styles.nearbySection, { paddingTop: short ? 4 : compact ? 12 : 20 }]} accessibilityLiveRegion="polite">
+              {nearby?.status === 'ready' && nearby.profiles.length === 0 ? <DiscoverySearchState compact={compact} /> : <Text style={[
+                styles.nearbyMessage,
+                { fontSize: compact ? 16 : 18, lineHeight: compact ? 23 : 26 },
+                nearby?.status === 'ready' && nearby.profiles.length > 0 && [
+                  styles.nearbyFound,
+                  { fontSize: compact ? 18 : 20, lineHeight: compact ? 25 : 28 },
+                ],
+              ]}>
+                {!nearby ? 'Checking your line of sight...'
+                  : nearby.status === 'error' ? 'Could not refresh nearby people. We will try again shortly.'
+                  : 'Someone is in your line of sight'}
+              </Text>}
+              {nearby?.status === 'ready' && nearby.profiles.map((profile) => (
+                <NearbyProfileCard key={profile.user_id} profile={profile} onBlocked={() => removeBlockedProfile(profile.user_id)} />
+              ))}
+            </View>
+          )}
+          {!isLooking && (
+            <View style={[styles.inactiveAction, { paddingTop: compact ? 16 : 24 }]}>
+              {actionArea}
+            </View>
+          )}
+        </ScrollView>
+
+        {isLooking && actionArea}
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  topControls: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', flexShrink: 0 },
-  profileControl: { alignSelf: 'flex-end', flexShrink: 0, minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
-  profileLabel: { color: '#253D2F', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
   content: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center', paddingHorizontal: 28 },
   title: { width: '100%', fontFamily: 'Tangerine-Bold', color: '#202D25', textAlign: 'center', flexShrink: 0 },
@@ -197,6 +184,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14,
     paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#C9CEC7',
   },
+  inactiveBadge: { borderColor: '#D8D0BC' },
+  inactiveMessage: { alignItems: 'center', gap: 16 },
+  inactiveDescription: { width: '100%', maxWidth: 300 },
+  inactiveAction: { width: '100%' },
   activeBadge: { backgroundColor: '#253D2F', borderColor: '#253D2F' },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#656D66' },
   activeDot: { backgroundColor: '#FEFCF8' },

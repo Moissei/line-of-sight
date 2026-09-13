@@ -68,7 +68,7 @@ test('connection block RPC, cleanup failure still navigates; report trims', asyn
   assert.equal(f.calls[1].params.details, 'details');
 });
 test('screen integration preserves privacy, removes nearby row, and clears chat before navigation', () => {
-  const discovery = fs.readFileSync('src/app/discovery.tsx', 'utf8');
+  const discovery = fs.readFileSync('src/app/(tabs)/discovery.tsx', 'utf8');
   assert.match(discovery, /profiles\.filter\(\(item\) => item.user_id !== userId\)/);
   assert.match(discovery, /onBlocked=\{\(\) => removeBlockedProfile\(profile.user_id\)\}/);
   assert.match(discovery, /stopPolling.current = pollNearbyDiscovery\(setNearby\)/);
@@ -76,7 +76,7 @@ test('screen integration preserves privacy, removes nearby row, and clears chat 
   assert.match(chat, /leaveBlockedChat\(\(\) => watcher\?\.dispose\(\), \(\) => router.dismissTo\('\/connections'\)\)/);
   assert.match(chat, /blocked.current = true/);
   assert.match(chat, /realtime.current = null/);
-  const requests = fs.readFileSync('src/app/requests.tsx', 'utf8'); assert.equal(requests.includes('SafetyActions'), false);
+  const requests = fs.readFileSync('src/app/(tabs)/requests.tsx', 'utf8'); assert.equal(requests.includes('SafetyActions'), false);
   const ui = fs.readFileSync('src/components/safety-actions.tsx', 'utf8');
   assert.equal(ui.includes('console.'), false); assert.equal(ui.includes('{target.id}'), false);
 });
@@ -93,7 +93,7 @@ test('actual nearby success callback removes row, disposes cache, and restarts r
   let state = { status: 'ready', profiles: [{ user_id: 'blocked', primaryPhotoUrl: 'memory-only' }, { user_id: 'other' }] };
   let stopped = 0, restarted = 0;
   const stopPolling = { current: () => stopped++ };
-  const callback = screenCallback('src/app/discovery.tsx', 'removeBlockedProfile', {
+  const callback = screenCallback('src/app/(tabs)/discovery.tsx', 'removeBlockedProfile', {
     stopPolling, presenceVerified: { current: true }, setNearby: update => { state = update(state); },
     pollNearbyDiscovery: () => { restarted++; return () => {}; },
   });
