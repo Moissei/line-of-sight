@@ -35,7 +35,6 @@ export function NearbyProfileCard({ profile, onBlocked }: { profile: NearbyProfi
           ))}
         </View>
       )}
-      {__DEV__ && <Text style={styles.distance}>{profile.distance_meters} m away</Text>}
       <SafetyActions target={{ kind: 'user', id: profile.user_id }} onBlocked={onBlocked} />
       <RequestToConnect key={profile.user_id} targetUserId={profile.user_id} revision={profile.requestRevision ?? 0} />
     </View>
@@ -56,5 +55,4 @@ const styles = StyleSheet.create({
   intents: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { maxWidth: '100%', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: '#EBEEE7' },
   intentLabel: { fontSize: 12, lineHeight: 18, color: '#253D2F' },
-  distance: { fontSize: 12, lineHeight: 18, color: '#656D66' },
 });

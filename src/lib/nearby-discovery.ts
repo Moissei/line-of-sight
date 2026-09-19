@@ -7,7 +7,6 @@ export type NearbyProfile = {
   gender: string | null;
   bio: string | null;
   intents: string[];
-  distance_meters: number;
 };
 
 export function parseNearbyProfiles(data: unknown): NearbyProfile[] {
@@ -17,14 +16,13 @@ export function parseNearbyProfiles(data: unknown): NearbyProfile[] {
       !(row.age === null || (typeof row.age === 'number' && Number.isInteger(row.age))) ||
       !(row.gender === null || typeof row.gender === 'string') ||
       !(row.bio === null || typeof row.bio === 'string') ||
-      !Array.isArray(row.intents) || !row.intents.every((intent: unknown) => typeof intent === 'string') ||
-      typeof row.distance_meters !== 'number' || !Number.isFinite(row.distance_meters) || row.distance_meters < 0) {
+      !Array.isArray(row.intents) || !row.intents.every((intent: unknown) => typeof intent === 'string')) {
       throw new Error('Invalid nearby response');
     }
     // Explicit projection: never retain unexpected private fields from a response.
     // Validate structure only; no profile-based eligibility filtering or sorting.
     return { user_id: row.user_id, first_name: row.first_name, age: row.age,
-      gender: row.gender, bio: row.bio, intents: [...row.intents], distance_meters: row.distance_meters };
+      gender: row.gender, bio: row.bio, intents: [...row.intents] };
   });
 }
 

@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { presenceErrorMessage, readDiscoveryPresence, setDiscoveryPresence } from '@/lib/discovery-presence';
@@ -13,10 +13,15 @@ export default function DiscoveryScreen() {
   // Only the START LOOKING press may create/reactivate a session.
   // Never derive discoverability from installation, onboarding, or profile intentions.
   const [isLooking, setIsLooking] = useState(false);
+  const [locationPending, setLocationPending] = useState(false);
   const [busy, setBusy] = useState(true);
   const [statusLift, setStatusLift] = useState(0);
   const [error, setError] = useState('');
   const inFlight = useRef(false);
+  const startController = useRef<AbortController | null>(null);
+  const mutation = useRef<Promise<boolean> | null>(null);
+  const focused = useRef(false);
+  const reconciliation = useRef(0);
   const [presenceReady, setPresenceReady] = useState(false);
   const presenceVerified = useRef(false);
   const [nearby, setNearby] = useState<NearbyResult | null>(null);
@@ -33,21 +38,35 @@ export default function DiscoveryScreen() {
   // UI to inactive on blur while a real database row may still be active.
   useFocusEffect(useCallback(() => {
     let cancelled = false;
+    focused.current = true;
+    const generation = ++reconciliation.current;
+    const current = () => !cancelled && generation === reconciliation.current;
+    const appState = AppState.addEventListener('change', state => {
+      if (state !== 'active') startController.current?.abort();
+    });
     presenceVerified.current = false;
     setBusy(true);
+    setLocationPending(false);
     setPresenceReady(false);
     setError('');
-    void readDiscoveryPresence()
+    // A refocus must read after an outstanding mutation, never race its old row.
+    void Promise.resolve(mutation.current).catch(() => {}).then(() => readDiscoveryPresence())
       .then((active) => {
-        if (!cancelled) {
+        if (current()) {
           setIsLooking(active);
           presenceVerified.current = true;
           setPresenceReady(true);
         }
       })
-      .catch((failure) => { if (!cancelled) setError(presenceErrorMessage(failure)); })
-      .finally(() => { if (!cancelled) setBusy(false); });
-    return () => { cancelled = true; presenceVerified.current = false; };
+      .catch((failure) => { if (current()) setError(presenceErrorMessage(failure)); })
+      .finally(() => { if (current()) setBusy(false); });
+    return () => {
+      cancelled = true;
+      focused.current = false;
+      presenceVerified.current = false;
+      startController.current?.abort();
+      appState.remove();
+    };
   }, []));
 
   useFocusEffect(useCallback(() => {
@@ -77,6 +96,11 @@ export default function DiscoveryScreen() {
 
   async function toggleLooking() {
     if (busy || inFlight.current) return;
+    const generation = ++reconciliation.current;
+    const current = () => focused.current && generation === reconciliation.current;
+    startController.current?.abort();
+    const controller = !isLooking ? new AbortController() : null;
+    startController.current = controller;
     // Cancel synchronously on STOP, before the database write or React rerender.
     stopPolling.current?.();
     stopPolling.current = null;
@@ -85,20 +109,28 @@ export default function DiscoveryScreen() {
     setBusy(true);
     setError('');
     try {
-      const active = await setDiscoveryPresence(!isLooking);
+      const operation = setDiscoveryPresence(!isLooking, pending => {
+        if (current()) setLocationPending(pending);
+      }, controller?.signal);
+      mutation.current = operation;
+      const active = await operation;
+      if (!current()) return;
       setIsLooking(active);
       presenceVerified.current = true;
       setPresenceReady(true);
     } catch (failure) {
-      setError(presenceErrorMessage(failure));
+      if (current() && !controller?.signal.aborted) setError(presenceErrorMessage(failure));
     } finally {
+      mutation.current = null;
+      if (startController.current === controller) startController.current = null;
       inFlight.current = false;
-      setBusy(false);
+      if (current()) { setLocationPending(false); setBusy(false); }
     }
   }
 
   const actionArea = (
         <View style={[styles.footer, { gap: short ? 8 : 16 }]}>
+          {locationPending && !isLooking && <Text accessibilityLiveRegion="polite" style={styles.previewNote}>Getting your location…</Text>}
           {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.previewNote}>{error}</Text>}
           <Pressable
             accessibilityRole="button"
