@@ -12,15 +12,6 @@ import { usePushNotifications } from '@/lib/use-push-notifications';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  // Temporary development-only connection check; no UI or navigation changes.
-  useEffect(() => {
-    if (__DEV__) {
-      void import('@/lib/supabase-connection-test')
-        .then(({ testSupabaseConnection }) => testSupabaseConnection())
-        .catch(() => console.error('[Supabase connection test] ERROR: Could not load the development check.'));
-    }
-  }, []);
-
   const [auth, setAuth] = useState({ ready: false, signedIn: false, generation: 0, userId: null as string | null });
   useEffect(() => {
     let previousUser: string | null = null;
@@ -81,7 +72,7 @@ function AuthenticatedRoutes({ signedIn, generation }: { signedIn: boolean; gene
         <Stack.Screen name="create-profile" /><Stack.Screen name="intentions" />
       </Stack.Protected>
       <Stack.Protected guard={complete}>
-        <Stack.Screen name="(tabs)" /><Stack.Screen name="edit-profile" /><Stack.Screen name="connection-detail" /><Stack.Screen name="explore" />
+        <Stack.Screen name="(tabs)" /><Stack.Screen name="edit-profile" /><Stack.Screen name="connection-detail" />
       </Stack.Protected>
     </Stack.Protected>
     <Stack.Screen name="auth-callback" />
