@@ -17,7 +17,8 @@ function fixture(previous, logout = async () => {}) {
       useRootNavigationState: () => ({ index: previous ? 1 : 0, routes: [...(previous ? [{ name: previous }] : []), { name: 'create-profile' }] }),
       useRouter: () => ({ canGoBack: () => !!previous, back: () => { backs++; } }),
     },
-    'react-native': { ...Object.fromEntries(['Modal', 'Pressable', 'Text', 'View'].map(x => [x, x])), StyleSheet: { create: x => x } },
+    'react-native': { ...Object.fromEntries(['Modal', 'Pressable', 'ScrollView', 'Text', 'View'].map(x => [x, x])), StyleSheet: { create: x => x } },
+    'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@/components/profile-form': { ProfileForm: 'ProfileForm' },
     '@/lib/logout': { LOGOUT_ERROR: 'Please try again.', logOut: () => { calls++; return logout(); } },
   };

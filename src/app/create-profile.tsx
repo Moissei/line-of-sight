@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useRootNavigationState, useRouter } from 'expo-router';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProfileForm } from '@/components/profile-form';
 import { logOut, LOGOUT_ERROR } from '@/lib/logout';
 
@@ -28,13 +29,15 @@ export default function CreateProfileScreen() {
       <Text style={styles.link}>{canReturn ? 'Back' : 'Log out'}</Text>
     </Pressable>} />
     <Modal visible={confirm} transparent animationType="fade" onRequestClose={() => { if (!lock.current) setConfirm(false); }}>
-      <View style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+      <SafeAreaView style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+        <ScrollView contentContainerStyle={styles.dialogContent}>
         <Text accessibilityRole="header" style={styles.title}>Log out?</Text>
         <Text style={styles.text}>Logging out will stop Looking and sign you out of this device.</Text>
         {error && <Text accessibilityRole="alert" style={styles.text}>{LOGOUT_ERROR}</Text>}
         <Pressable accessibilityRole="button" disabled={busy} style={styles.action} onPress={() => void submitLogout()}><Text style={styles.link}>{busy ? 'Logging out...' : 'Log Out'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={busy} style={styles.action} onPress={() => setConfirm(false)}><Text style={styles.link}>Cancel</Text></Pressable>
-      </View></View>
+        </ScrollView>
+      </View></SafeAreaView>
     </Modal>
   </>;
 }
@@ -42,7 +45,8 @@ const styles = StyleSheet.create({
   back: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center', paddingRight: 20 },
   link: { fontSize: 14, color: '#253D2F', fontWeight: '600' },
   overlay: { flex: 1, backgroundColor: 'rgba(20,30,22,0.45)', padding: 24, justifyContent: 'center' },
-  dialog: { width: '100%', maxWidth: 420, alignSelf: 'center', borderRadius: 18, padding: 24, gap: 12, backgroundColor: '#FEFCF8' },
+  dialog: { width: '100%', maxWidth: 420, maxHeight: '100%', alignSelf: 'center', borderRadius: 18, overflow: 'hidden', backgroundColor: '#FEFCF8' },
+  dialogContent: { padding: 24, gap: 12 },
   title: { fontSize: 26, fontWeight: '600', color: '#202D25' },
   text: { fontSize: 15, lineHeight: 23, color: '#656D66' },
   action: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 },

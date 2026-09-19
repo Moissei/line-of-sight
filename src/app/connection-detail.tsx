@@ -192,7 +192,7 @@ export default function ConnectionDetailScreen() {
         </View> : <>
           {loadError && <View style={styles.errorRow}>
             <Text accessibilityRole="alert" style={styles.errorText}>Couldn{'’'}t load messages. Please try again.</Text>
-            <Pressable accessibilityRole="button" onPress={() => void refresh()}><Text style={styles.link}>Retry</Text></Pressable>
+            <Pressable accessibilityRole="button" style={styles.retry} onPress={() => void refresh()}><Text style={styles.link}>Retry</Text></Pressable>
           </View>}
           <FlatList ref={list} data={messages} keyExtractor={(message) => message.message_id}
             contentContainerStyle={[styles.messageList, messages.length === 0 && styles.emptyList]}
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   header: { minHeight: 62, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E1E4DE' },
   back: { width: 64, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 3 }, safetySlot: { width: 64, alignItems: 'flex-end' }, title: { flex: 1, textAlign: 'center', fontSize: 22, fontWeight: '600', color: '#202D25' },
   link: { fontSize: 13, fontWeight: '700', color: '#253D2F' }, text: { fontSize: 15, lineHeight: 22, color: '#656D66', textAlign: 'center' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 }, retry: { minHeight: 44, justifyContent: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 }, retry: { minWidth: 44, minHeight: 44, justifyContent: 'center' },
   errorRow: { paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 }, errorText: { flexShrink: 1, fontSize: 13, color: '#7A3E36' },
   messageList: { flexGrow: 1, paddingVertical: 16 }, emptyList: { justifyContent: 'center' }, empty: { color: '#656D66', fontSize: 16, textAlign: 'center' },
   earlier: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, bubbleRow: { flexDirection: 'row', justifyContent: 'flex-start' }, outgoingRow: { justifyContent: 'flex-end' },

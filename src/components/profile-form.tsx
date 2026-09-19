@@ -43,10 +43,15 @@ export function ProfileForm({ editing = false, tabScreen = false, topAction }: {
     setSaving(true);
     try {
       await saveProfile(draft, true);
-      if (tabScreen) router.navigate('/discovery');
-      else if (router.canGoBack()) router.back(); else router.replace('/discovery');
-    } catch (failure) { setError(profileSaveError(failure)); }
-    finally { inFlight.current = false; setSaving(false); }
+    } catch (failure) {
+      setError(profileSaveError(failure));
+      inFlight.current = false;
+      setSaving(false);
+      return;
+    }
+    // Keep the outgoing form locked; do not rerender it after navigation starts.
+    if (tabScreen) router.navigate('/discovery');
+    else if (router.canGoBack()) router.back(); else router.replace('/discovery');
   }
   return (
     <SafeAreaView edges={tabScreen ? ['top', 'left', 'right'] : ['top', 'bottom', 'left', 'right']} style={styles.screen}>
@@ -71,7 +76,7 @@ export function ProfileForm({ editing = false, tabScreen = false, topAction }: {
           <View style={styles.heading}>
             <View style={styles.headerRow}>
               <Text accessibilityRole="header" style={[styles.title, { flex: 1 }]}>{editing ? 'Edit profile' : 'Create your profile'}</Text>
-              {tabScreen && <Pressable accessibilityRole="button" accessibilityLabel="Account settings"
+              {editing && <Pressable accessibilityRole="button" accessibilityLabel="Account settings"
                 disabled={saving} onPress={() => router.push('/account')}
                 style={({ pressed }) => [styles.settings, pressed && styles.pressed]}>
                 <SymbolView name={{ ios: 'gearshape', android: 'settings', web: 'settings' }} size={22} weight="regular" tintColor="#253D2F" />

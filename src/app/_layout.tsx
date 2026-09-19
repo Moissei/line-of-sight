@@ -81,7 +81,7 @@ function AuthenticatedRoutes({ signedIn, generation }: { signedIn: boolean; gene
         <Stack.Screen name="create-profile" /><Stack.Screen name="intentions" />
       </Stack.Protected>
       <Stack.Protected guard={complete}>
-        <Stack.Screen name="(tabs)" /><Stack.Screen name="connection-detail" /><Stack.Screen name="explore" />
+        <Stack.Screen name="(tabs)" /><Stack.Screen name="edit-profile" /><Stack.Screen name="connection-detail" /><Stack.Screen name="explore" />
       </Stack.Protected>
     </Stack.Protected>
     <Stack.Screen name="auth-callback" />

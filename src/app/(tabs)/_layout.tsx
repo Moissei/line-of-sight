@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 
-// Route groups preserve /discovery, /connections, /requests and /edit-profile.
+// Route groups preserve /discovery, /connections, /requests and /profile.
 export default function AuthenticatedTabs() {
   return (
     <Tabs initialRouteName="discovery" backBehavior="initialRoute" screenOptions={{
@@ -24,7 +24,7 @@ export default function AuthenticatedTabs() {
       <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: ({ color }) => (
         <SymbolView name={{ ios: 'envelope', android: 'mail', web: 'mail' }} tintColor={color} size={23} />
       ) }} />
-      <Tabs.Screen name="edit-profile" options={{ title: 'Profile', tabBarIcon: ({ color }) => (
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color }) => (
         <SymbolView name={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }} tintColor={color} size={23} />
       ) }} />
     </Tabs>

@@ -31,7 +31,7 @@ export default function IncomingRequestsScreen() {
       }
     } catch {
       if (!abort.signal.aborted && current === generation.current && version === refreshVersion.current)
-        setError('Could not load requests. Please try refreshing.');
+        setError('Could not load requests. Please try again.');
     } finally {
       if (current === generation.current && version === refreshVersion.current) setLoading(false);
     }
@@ -90,11 +90,12 @@ export default function IncomingRequestsScreen() {
       {requests.map((request) => <View key={request.request_id} style={styles.card}>
         <View style={styles.header}>
           <View style={styles.avatar} accessible={false}><View style={styles.head} /><View style={styles.shoulders} /></View>
-          <View style={styles.identity}><Text style={styles.name}>{request.first_name}{request.age !== null ? `, ${request.age}` : ''}</Text>
-            {!!request.gender && <Text style={styles.secondary}>{request.gender}</Text>}</View>
+          <View style={styles.identity}><Text numberOfLines={2} ellipsizeMode="tail" style={styles.name}>{request.first_name}{request.age !== null ? `, ${request.age}` : ''}</Text>
+            {!!request.bio && <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardSecondary}>{request.bio}</Text>}
+            {!!request.gender && <Text numberOfLines={1} ellipsizeMode="tail" style={styles.cardSecondary}>{request.gender}</Text>}
+            {request.intents.length > 0 && <View style={styles.intents}>{request.intents.map((intent, index) => <Text key={index} style={styles.chip}>{intent}</Text>)}</View>}
+          </View>
         </View>
-        {!!request.bio && <Text style={styles.secondary}>{request.bio}</Text>}
-        <View style={styles.intents}>{request.intents.map((intent, index) => <Text key={index} style={styles.chip}>{intent}</Text>)}</View>
         <View style={styles.actions}>{(['accepted', 'declined'] as const).map((response) => <Pressable key={response}
           accessibilityRole="button" disabled={busyId !== null} accessibilityState={{ disabled: busyId !== null, busy: busyId === request.request_id }}
           onPress={() => void respond(request.request_id, response)}
@@ -119,10 +120,11 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 21, lineHeight: 28, fontWeight: '600', color: '#202D25', textAlign: 'center', marginBottom: 10 },
   emptyDescription: { maxWidth: 280, fontSize: 15, lineHeight: 23, color: '#656D66', textAlign: 'center' },
   linkText: { color: '#253D2F', fontSize: 14, fontWeight: '600' },
-  card: { borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 16, padding: 18, gap: 14 }, header: { flexDirection: 'row', gap: 12, alignItems: 'center' }, identity: { flex: 1 },
-  name: { fontSize: 22, fontWeight: '600', color: '#202D25' }, avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 3 },
-  head: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#8B988D' }, shoulders: { width: 24, height: 13, borderRadius: 6, backgroundColor: '#8B988D' },
-  intents: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, chip: { backgroundColor: '#EBEEE7', color: '#253D2F', padding: 6, borderRadius: 10, fontSize: 12 },
+  card: { backgroundColor: '#FEFCF8', borderWidth: 1, borderColor: '#253D2F', borderRadius: 18, padding: 16, gap: 12 }, header: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' }, identity: { flex: 1, minWidth: 0, gap: 4 },
+  name: { fontSize: 21, lineHeight: 27, fontWeight: '600', color: '#202D25' }, avatar: { width: 90, height: 114, flexShrink: 0, borderRadius: 12, overflow: 'hidden', backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  head: { width: 17, height: 17, borderRadius: 9, backgroundColor: '#8B988D' }, shoulders: { width: 34, height: 18, borderRadius: 9, backgroundColor: '#8B988D' },
+  cardSecondary: { fontSize: 14, lineHeight: 20, color: '#656D66' },
+  intents: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingTop: 6 }, chip: { maxWidth: '100%', backgroundColor: '#253D2F', color: '#FEFCF8', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10, fontSize: 12, lineHeight: 17 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, button: { flex: 1, minWidth: 90, minHeight: 48, padding: 12, borderRadius: 12, backgroundColor: '#253D2F', justifyContent: 'center', alignItems: 'center' },
-  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#C9CEC7' }, buttonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' }, disabled: { opacity: 0.6 },
+  outline: { backgroundColor: 'transparent' }, buttonText: { color: '#FEFCF8', fontSize: 13, fontWeight: '700' }, disabled: { opacity: 0.6 },
 });

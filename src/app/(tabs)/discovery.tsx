@@ -102,7 +102,7 @@ export default function DiscoveryScreen() {
           {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.previewNote}>{error}</Text>}
           <Pressable
             accessibilityRole="button"
-            accessibilityHint={isLooking ? 'End the discovery preview session' : 'Explicitly start a discovery preview session'}
+            accessibilityHint={isLooking ? 'Stop Looking and stop being visible nearby' : 'Start Looking to become visible to nearby people'}
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
             onPress={() => void toggleLooking()}

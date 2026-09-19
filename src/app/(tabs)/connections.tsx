@@ -32,12 +32,18 @@ export default function ConnectionsScreen() {
 
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <StatusBar style="dark" />
-    <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor="#253D2F" />}>
+    <ScrollView contentContainerStyle={[styles.content, !loading && !error && connections.length === 0 && styles.emptyContent]} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor="#253D2F" />}>
       <Text accessibilityRole="header" style={styles.title}>Connections</Text>
       <Text style={styles.secondary}>People you have chosen to connect with.</Text>
       {loading && <Text style={styles.secondary}>Loading connections...</Text>}
       {error && <Text accessibilityRole="alert" style={styles.secondary}>Couldn’t load connections. Please try again.</Text>}
-      {!loading && !error && connections.length === 0 && <Text style={styles.secondary}>No connections yet.</Text>}
+      {!loading && !error && connections.length === 0 && <View style={styles.emptyState}>
+        <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.linkedCircles}>
+          <View style={styles.leftCircle} /><View style={styles.rightCircle} />
+        </View>
+        <Text style={styles.emptyTitle}>No connections yet</Text>
+        <Text style={styles.emptyDescription}>When you and someone nearby choose to connect, they’ll appear here.</Text>
+      </View>}
       {connections.map((connection) => <Pressable key={connection.connection_id}
         accessibilityRole="button" accessibilityLabel={`Open connection with ${connection.first_name}`}
         onPress={() => router.push({ pathname: '/connection-detail', params: { connectionId: connection.connection_id } })}
@@ -61,6 +67,13 @@ export default function ConnectionsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' }, content: { width: '100%', maxWidth: 460, alignSelf: 'center', padding: 28, gap: 14 },
   title: { fontSize: 30, fontWeight: '600', color: '#202D25' }, secondary: { fontSize: 15, lineHeight: 22, color: '#656D66' },
+  emptyContent: { flexGrow: 1 },
+  emptyState: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40, paddingBottom: 80 },
+  linkedCircles: { width: 100, height: 58, marginBottom: 24 },
+  leftCircle: { position: 'absolute', left: 0, width: 58, height: 58, borderRadius: 29, borderWidth: 1, borderColor: '#253D2F' },
+  rightCircle: { position: 'absolute', right: 0, width: 58, height: 58, borderRadius: 29, borderWidth: 1, borderColor: '#B59962' },
+  emptyTitle: { fontSize: 21, lineHeight: 28, fontWeight: '600', color: '#202D25', textAlign: 'center', marginBottom: 10 },
+  emptyDescription: { maxWidth: 280, fontSize: 15, lineHeight: 23, color: '#656D66', textAlign: 'center' },
   card: { backgroundColor: '#FEFCF8', borderWidth: 1, borderColor: '#253D2F', borderRadius: 18, padding: 16 }, header: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' }, identity: { flex: 1, minWidth: 0, minHeight: 114, gap: 4 },
   name: { fontSize: 21, lineHeight: 27, fontWeight: '600', color: '#202D25' }, avatar: { width: 90, height: 114, flexShrink: 0, borderRadius: 12, overflow: 'hidden', backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 4 },
   head: { width: 17, height: 17, borderRadius: 9, backgroundColor: '#8B988D' }, shoulders: { width: 34, height: 18, borderRadius: 9, backgroundColor: '#8B988D' },

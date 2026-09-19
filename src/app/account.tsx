@@ -53,22 +53,26 @@ export default function AccountScreen() {
       </View>
     </ScrollView>
     <Modal visible={confirm} transparent animationType="fade" onRequestClose={() => { if (!lock.current) setConfirm(false); }}>
-      <View style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+      <SafeAreaView style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+        <ScrollView contentContainerStyle={styles.dialogContent}>
         <Text accessibilityRole="header" style={styles.title}>Log out?</Text>
         <Text style={styles.text}>Logging out will stop Looking and sign you out of this device.</Text>
         {error && <Text accessibilityRole="alert" style={styles.text}>{LOGOUT_ERROR}</Text>}
         <Pressable accessibilityRole="button" disabled={busy} style={styles.button} onPress={() => void submit()}><Text style={styles.link}>{busy ? 'Logging out...' : 'Log Out'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={busy} style={styles.button} onPress={() => setConfirm(false)}><Text style={styles.link}>Cancel</Text></Pressable>
-      </View></View>
+        </ScrollView>
+      </View></SafeAreaView>
     </Modal>
     <Modal visible={confirmDelete} transparent animationType="fade" onRequestClose={() => { if (!lock.current) setConfirmDelete(false); }}>
-      <View style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+      <SafeAreaView style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+        <ScrollView contentContainerStyle={styles.dialogContent}>
         <Text accessibilityRole="header" style={styles.title}>Permanently delete account?</Text>
         <Text style={styles.text}>Your account, profile and photos will be permanently removed and discovery will stop. This cannot be undone. Past conversations may remain for others as Deleted User.</Text>
         {deleteError && <Text accessibilityRole="alert" style={styles.text}>{DELETE_ACCOUNT_ERROR}</Text>}
         <Pressable accessibilityRole="button" disabled={deleting} style={styles.button} onPress={() => void submitDelete()}><Text style={styles.danger}>{deleting ? 'Deleting account…' : 'Delete permanently'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={deleting} style={styles.button} onPress={() => setConfirmDelete(false)}><Text style={styles.link}>Cancel</Text></Pressable>
-      </View></View>
+        </ScrollView>
+      </View></SafeAreaView>
     </Modal>
   </SafeAreaView>;
 }
@@ -86,5 +90,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '600', color: '#202D25' }, text: { fontSize: 15, lineHeight: 23, color: '#656D66' },
   link: { color: '#253D2F', fontSize: 15, fontWeight: '600' }, button: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 },
   overlay: { flex: 1, backgroundColor: 'rgba(20,30,22,0.45)', padding: 24, justifyContent: 'center' },
-  dialog: { width: '100%', maxWidth: 420, alignSelf: 'center', borderRadius: 18, padding: 24, gap: 12, backgroundColor: '#FEFCF8' },
+  dialog: { width: '100%', maxWidth: 420, maxHeight: '100%', alignSelf: 'center', borderRadius: 18, overflow: 'hidden', backgroundColor: '#FEFCF8' },
+  dialogContent: { padding: 24, gap: 12 },
 });

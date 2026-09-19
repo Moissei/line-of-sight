@@ -24,7 +24,7 @@ export function DiscoveryBrand({ active, width, fontSize, compact }: { active: b
       fading.start();
       if (active) {
         const illuminate = (eye: Animated.Value) => Animated.sequence([
-          Animated.timing(eye, { toValue: 0.55, duration: 200, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+          Animated.timing(eye, { toValue: 0.85, duration: 200, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
           Animated.timing(eye, { toValue: 0, duration: 200, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
         ]);
         traveling = Animated.loop(Animated.sequence([
@@ -59,14 +59,18 @@ export function DiscoveryBrand({ active, width, fontSize, compact }: { active: b
       style={[styles.eyeFrame, { width, height: width * 0.245 }]}>
       <Image source={require('@/assets/images/eyechico.png')} resizeMode="contain" accessible={false}
         style={{ position: 'absolute', width, height: width * 1066 / 1476, top: -width * 330 / 1476 }} />
-      {/* Active-only masks cover the baked-in star, arcs and dot ornaments.
+      {/* Masks cover the baked-in star, arcs and dot ornaments.
           Their source-image bounds avoid both eyes and eyebrows. */}
-      {active && [{ x: 580, y: 430, w: 330, h: 235 }, { x: 460, y: 530, w: 560, h: 28 }].map(({ x, y, w, h }) => (
+      {[{ x: 580, y: 430, w: 330, h: 235 }, { x: 460, y: 530, w: 560, h: 28 }].map(({ x, y, w, h }) => (
         <View key={x} pointerEvents="none" style={{ position: 'absolute',
           left: width * x / 1476, top: width * (y - 330) / 1476,
           width: width * w / 1476, height: width * h / 1476, backgroundColor: '#FEFCF8',
         }} />
       ))}
+      {[0.325, 0.345, 0.365, 0.635, 0.655, 0.675].map(x => <View key={x} pointerEvents="none" style={{
+        position: 'absolute', left: width * x - 1.5, top: width * 213 / 1476 - 1,
+        width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#B59962',
+      }} />)}
       {/* Pupils are baked into the PNG. Small opacity-only overlays leave it intact. */}
       {active && [{ x: 347, y: 538, opacity: leftPupil }, { x: 1130, y: 550, opacity: rightPupil }].map(({ x, y, opacity }) => (
         <Animated.View key={x} pointerEvents="none" style={{ position: 'absolute',
@@ -75,11 +79,11 @@ export function DiscoveryBrand({ active, width, fontSize, compact }: { active: b
           backgroundColor: '#D6B66F', opacity,
         }} />
       ))}
-      {active && <View pointerEvents="none" style={{ position: 'absolute', left: width * 0.32, top: width * 213 / 1476, width: width * 0.36, height: 1, backgroundColor: 'rgba(181, 153, 98, 0.35)' }}>
-        <Animated.View style={[styles.signal, {
+      {<View pointerEvents="none" style={{ position: 'absolute', left: width * 0.32, top: width * 213 / 1476, width: width * 0.36, height: 1, backgroundColor: 'rgba(181, 153, 98, 0.35)' }}>
+        {active && <Animated.View style={[styles.signal, {
           opacity: signal.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 0.7, 0.7, 0] }),
           transform: [{ translateX: signal.interpolate({ inputRange: [0, 1], outputRange: [0, Math.max(0, width * 0.36 - 12)] }) }],
-        }]} />
+        }]} />}
       </View>}
     </View>
   </View>;

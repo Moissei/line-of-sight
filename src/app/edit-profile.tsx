@@ -45,7 +45,7 @@ function EditProfileContent() {
     void load();
     return () => { cancelled = true; };
   }, [attempt, setDraft, refreshProfileStatus]);
-  if (loadedOwner && draft.photoOwner === loadedOwner) return <ProfileForm editing tabScreen />;
+  if (loadedOwner && draft.photoOwner === loadedOwner) return <ProfileForm editing />;
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}><View style={styles.content}>
     <View style={styles.headerRow}>
       <Text style={[styles.title, { flex: 1 }]}>Edit profile</Text>

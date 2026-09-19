@@ -89,7 +89,9 @@ test('SIGNED_OUT changes the real layout guard and remount key; token refresh pr
   const guard=()=>provider().props.children.props.children.props.signedIn;
   assert.equal(guard(),true);const key=provider().key;
   callback('TOKEN_REFRESHED',{user:{id:'internal'}});render();assert.equal(provider().key,key);
-  callback('SIGNED_OUT',null);render();assert.equal(guard(),false);assert.notEqual(provider().key,key);
+  callback('SIGNED_IN',{user:{id:'other-account'}});render();assert.notEqual(provider().key,key);
+  const switchedKey=provider().key;
+  callback('SIGNED_OUT',null);render();assert.equal(guard(),false);assert.notEqual(provider().key,switchedKey);
   callback('SIGNED_IN',{user:{id:'internal'}});render();assert.equal(guard(),true);
   const beforeDeletion=provider().key;deletionCallback();render();assert.equal(guard(),false);assert.notEqual(provider().key,beforeDeletion);
   await new Promise(r=>setTimeout(r,5));delete global.__DEV__;

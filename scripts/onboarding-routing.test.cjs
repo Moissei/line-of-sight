@@ -68,7 +68,7 @@ test('actual route guards exclude tabs/chat for incomplete/loading/error users a
 test('onboarding preserves two-step save order and profile absence is not a network error',()=>{
   const form=fs.readFileSync('src/components/profile-form.tsx','utf8');assert.match(form,/if \(!editing\) \{ router.push\('\/intentions'\); return; \}/);
   const finish=fs.readFileSync('src/app/intentions.tsx','utf8');assert.ok(finish.indexOf('await saveProfile(draft)')<finish.indexOf('await refreshProfileStatus()'));assert.match(finish,/validateProfile\(draft\)/);
-  const edit=fs.readFileSync('src/app/(tabs)/edit-profile.tsx','utf8');assert.match(edit,/maybeSingle\(\)/);assert.match(edit,/if \(!data\).*refreshProfileStatus/);
+  const edit=fs.readFileSync('src/app/edit-profile.tsx','utf8');assert.match(edit,/maybeSingle\(\)/);assert.match(edit,/if \(!data\).*refreshProfileStatus/);
   const profile=fs.readFileSync('src/lib/profile.ts','utf8');assert.match(profile,/never used as discovery filters/);
 });
 
