@@ -32,6 +32,7 @@ test('carousel keeps stable slot keys and native snapping for one/two/three phot
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
       if (name === 'react') return { useState(v) { const i = cursor++; if (!(i in state)) state[i] = typeof v === 'function' ? v() : v; return [state[i], x => { state[i] = x; }]; }, useEffect: () => {}, useRef: v => ({ current: v }) };
       if (name === 'react-native') return { View: 'View', Image: 'Image', ScrollView: 'ScrollView', StyleSheet: { create: x => x }, PanResponder: { create: handlers => ({ panHandlers: handlers }) }, Animated: { ScrollView: 'AnimatedScrollView', event: (_, config) => config.listener, View: 'AnimatedView', Value: class { stopAnimation() {} setValue() {} interpolate(config) { return config; } }, timing: () => ({ start: fn => fn({finished:true}) }) } };
+      if (name.endsWith('profile-photo-image')) return { ProfilePhotoImage: 'PreparedImage' };
       if (name.endsWith('profile-photos')) return { PHOTO_POSITIONS: [1, 2, 3] };
       return {};
     }, module, module.exports);
@@ -42,7 +43,7 @@ test('carousel keeps stable slot keys and native snapping for one/two/three phot
     }
     render().find(n => n.props?.onLayout).props.onLayout({ nativeEvent: { layout: { width: 260 } } });
     let nodes = render();
-    assert.deepEqual(nodes.filter(n => n.type === 'Image').map(n => n.props.source.uri), Object.keys(photos).map(k => photos[k]));
+    assert.deepEqual(nodes.filter(n => n.type === 'PreparedImage').map(n => n.props.uri), Object.keys(photos).map(k => photos[k]));
     const count = Object.keys(photos).length;
     assert.equal(nodes.filter(n => n.type === 'AnimatedView').length, count);
     assert.equal(nodes.filter(n => n.props?.style === undefined ? false : Array.isArray(n.props.style) && n.props.style[0]?.width === 5).length, count > 1 ? count : 0);

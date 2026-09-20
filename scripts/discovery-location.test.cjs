@@ -25,7 +25,7 @@ function fixture(options = {}) {
   const location = {
     Accuracy: { High: 4, Balanced: 3 },
     async requestForegroundPermissionsAsync() { permissions++; if (options.permissionFailure) throw Error('private'); return { granted: !options.denied, android: { accuracy: options.coarse ? 'coarse' : 'fine' } }; },
-    async getLastKnownPositionAsync(opts) { caches++; assert.deepEqual(opts, { maxAge: 3000, requiredAccuracy: 15 }); if (options.cachePending) return new Promise(r => { cacheResolve = r; }); if (options.cacheThrows) throw Error('private'); return 'cached' in options ? options.cached : fix(); },
+    async getLastKnownPositionAsync(opts) { caches++; assert.deepEqual(opts, { maxAge: 3000, requiredAccuracy: 20 }); if (options.cachePending) return new Promise(r => { cacheResolve = r; }); if (options.cacheThrows) throw Error('private'); return 'cached' in options ? options.cached : fix(); },
     watchPositionAsync(opts, cb, error) {
       currents++; callback = cb; errorCallback = error;
       assert.deepEqual(opts, { accuracy: 4, timeInterval: 1000, distanceInterval: 0, mayShowUserSettingsDialog: false });
@@ -38,27 +38,27 @@ function fixture(options = {}) {
   };
   class Clock extends Date { static now() { return now; } }
   const exports = {};
-  new Function('require', 'exports', '__DEV__', 'Date', 'performance', 'setTimeout', 'clearTimeout', 'console', code)(id => id === 'expo-location' ? location : id === 'react-native' ? { Platform: { OS: options.ios ? 'ios' : 'android' } } : { supabase: client }, exports, false, Clock, { now: () => now }, (fn, ms) => { const id = ++timerId; timers.set(id, { fn, at: now + ms }); return id; }, id => timers.delete(id), { log() { assert.fail('Production emitted temporary diagnostics'); } });
+  new Function('require', 'exports', 'Date', 'performance', 'setTimeout', 'clearTimeout', 'console', code)(id => id === 'expo-location' ? location : id === 'react-native' ? { Platform: { OS: options.ios ? 'ios' : 'android' } } : { supabase: client }, exports, Clock, { now: () => now }, (fn, ms) => { const id = ++timerId; timers.set(id, { fn, at: now + ms }); return id; }, id => timers.delete(id), { log() { assert.fail('Unexpected logging'); } });
   return { start: signal => exports.setDiscoveryPresence(true, value => pending.push(value), signal), stop: () => exports.setDiscoveryPresence(false), pending,
-    emit: location => callback(location), fail: () => errorCallback('private'),
+    emit: location => callback(location), callbacks: () => ({ update: callback, error: errorCallback }), fail: () => errorCallback('private'),
     handle: () => resolveHandle(handle), rejectHandle: () => rejectHandle(Error('private')), cache: location => cacheResolve(location),
     removals: () => removals, timers: () => timers.size,
     advance(ms, run = true) { now += ms; if (run) for (const [id, t] of [...timers]) if (t.at <= now) { timers.delete(id); t.fn(); } },
     counts: () => ({ writes, currents, permissions, caches }) };
 }
 test('acceptable cache skips acquisition; exact age and accuracy boundaries accepted', async () => {
-  for (const cached of [fix(), { timestamp: 7000, coords: { ...fix().coords, accuracy: 15 } }]) {
+  for (const cached of [fix(), { timestamp: 7000, coords: { ...fix().coords, accuracy: 20 } }]) {
     const f = fixture({ cached }); assert.equal(await f.start(), true);
     assert.equal(f.counts().currents, 0); assert.equal(f.counts().writes, 1); assert.deepEqual(f.pending, [true, false]);
   }
 });
-test('watcher rejects just above 15m and accepts exactly 15m', async () => {
-  const f = fixture({ cached: { ...fix(), coords: { ...fix().coords, accuracy: 15.01 } }, manual: true });
+test('watcher rejects just above 20m and accepts exactly 20m', async () => {
+  const f = fixture({ cached: { ...fix(), coords: { ...fix().coords, accuracy: 20.01 } }, manual: true });
   const p = f.start(); await flush();
   assert.equal(f.counts().currents, 1);
-  f.emit({ ...fix(), coords: { ...fix().coords, accuracy: 15.01 } });
+  f.emit({ ...fix(), coords: { ...fix().coords, accuracy: 20.01 } });
   assert.equal(f.counts().writes, 0);
-  f.emit({ timestamp: 7000, coords: { ...fix().coords, accuracy: 15 } });
+  f.emit({ timestamp: 7000, coords: { ...fix().coords, accuracy: 20 } });
   assert.equal(await p, true); assert.equal(f.counts().writes, 1);
 });
 test('server discovery still enforces spheroidal 20m radius', () => {
@@ -68,7 +68,7 @@ test('server discovery still enforces spheroidal 20m radius', () => {
 });
 const invalid = [null, { ...fix(), timestamp: 6999 }, { ...fix(), timestamp: 10001 },
   ...[undefined, NaN, Infinity].map(timestamp => ({ ...fix(), timestamp })),
-  ...[undefined, null, NaN, Infinity, 0, -1, 15.01].map(accuracy => ({ ...fix(), coords: { ...fix().coords, accuracy } })),
+  ...[undefined, null, NaN, Infinity, 0, -1, 20.01].map(accuracy => ({ ...fix(), coords: { ...fix().coords, accuracy } })),
   ...[NaN, Infinity, 91, -91].map(latitude => ({ ...fix(), coords: { ...fix().coords, latitude } })),
   ...[NaN, Infinity, 181, -181].map(longitude => ({ ...fix(), coords: { ...fix().coords, longitude } })),
 ];
@@ -201,4 +201,12 @@ for (const lifecycle of ['success', 'blur', 'unmount', 'background']) test(`scre
   locationPending(false); render(); assert.match(JSON.stringify(tree), /SESSION INACTIVE/);
   confirm(true); await flush(); render(); assert.match(JSON.stringify(tree), /SESSION ACTIVE/);
   assert.doesNotMatch(JSON.stringify(tree), /Getting your location…/);
+});
+
+test('poor updates never re-register watcher; one accepted result activates once', async () => {
+ const f=fixture({cached:null,manual:true}); const p=f.start(); await flush();
+ f.emit({...fix(),coords:{...fix().coords,accuracy:21}}); f.advance(1000); await flush();
+ assert.equal(f.counts().currents,1); f.emit({...fix(),timestamp:11000,coords:{...fix().coords,accuracy:20}});
+ await p; f.emit(fix()); assert.equal(f.counts().writes,1); assert.equal(f.removals(),1); assert.equal(f.timers(),0);
+ assert.doesNotMatch(source,/restartWatch|restartTimer|Watcher refresh/);
 });

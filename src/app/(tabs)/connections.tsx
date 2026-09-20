@@ -11,31 +11,34 @@ export default function ConnectionsScreen() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const loaded = useRef(false);
   const controller = useRef<AbortController | null>(null);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (manual = false) => {
     controller.current?.abort();
     const abort = new AbortController();
     controller.current = abort;
-    setLoading(true); setError(false);
+    setLoading(!loaded.current); setRefreshing(manual);
     try {
       const data = await loadConnections(abort.signal);
       if (!abort.signal.aborted) {
         setConnections(data);
+        loaded.current = true; setError(false);
       }
     } catch { if (!abort.signal.aborted) setError(true); }
-    finally { if (!abort.signal.aborted) setLoading(false); }
+    finally { if (!abort.signal.aborted) { setLoading(false); setRefreshing(false); } }
   }, []);
   useFocusEffect(useCallback(() => {
-    const timer = setTimeout(() => { setConnections([]); void refresh(); }, 0);
-    return () => { clearTimeout(timer); controller.current?.abort(); setConnections([]); };
+    const timer = setTimeout(() => { void refresh(); }, 0);
+    return () => { clearTimeout(timer); controller.current?.abort(); };
   }, [refresh]));
 
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <StatusBar style="dark" />
-    <ScrollView contentContainerStyle={[styles.content, !loading && !error && connections.length === 0 && styles.emptyContent]} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor="#253D2F" />}>
+    <ScrollView contentContainerStyle={[styles.content, !loading && !error && connections.length === 0 && styles.emptyContent]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh(true)} tintColor="#253D2F" />}>
       <Text accessibilityRole="header" style={styles.title}>Connections</Text>
       <Text style={styles.secondary}>People you have chosen to connect with.</Text>
-      {loading && <Text style={styles.secondary}>Loading connections...</Text>}
+      {loading && connections.length === 0 && <Text style={styles.secondary}>Loading connections...</Text>}
       {error && <Text accessibilityRole="alert" style={styles.secondary}>Couldn’t load connections. Please try again.</Text>}
       {!loading && !error && connections.length === 0 && <View style={styles.emptyState}>
         <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.linkedCircles}>

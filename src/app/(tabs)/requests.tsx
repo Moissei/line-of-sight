@@ -16,6 +16,7 @@ export default function IncomingRequestsScreen() {
   const generation = useRef(0);
   const refreshVersion = useRef(0);
   const controller = useRef<AbortController | null>(null);
+  const loaded = useRef(false);
 
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
@@ -28,6 +29,7 @@ export default function IncomingRequestsScreen() {
       const data = await loadIncomingRequests(abort.signal);
       if (current === generation.current && version === refreshVersion.current) {
         setRequests(data); setError('');
+        loaded.current = true;
       }
     } catch {
       if (!abort.signal.aborted && current === generation.current && version === refreshVersion.current)
@@ -39,7 +41,7 @@ export default function IncomingRequestsScreen() {
   useFocusEffect(useCallback(() => {
     focused.current = true;
     const timer = setTimeout(() => {
-      setRequests([]); setNotice(''); setError(''); setLoading(true);
+      setLoading(!loaded.current);
       if (!inFlight.current) setBusyId(null);
       void refresh();
     }, 0);
@@ -75,7 +77,7 @@ export default function IncomingRequestsScreen() {
     <ScrollView contentContainerStyle={[styles.content, !loading && !error && requests.length === 0 && styles.emptyContent]}>
       <Text accessibilityRole="header" style={styles.title}>Requests</Text>
       <Text style={styles.secondary}>People who want to connect with you.</Text>
-      {loading && <Text style={styles.secondary}>Loading requests...</Text>}
+      {loading && requests.length === 0 && <Text style={styles.secondary}>Loading requests...</Text>}
       {!!error && <Text accessibilityRole="alert" style={styles.secondary}>{error}</Text>}
       {!!notice && <Text accessibilityLiveRegion="polite" style={styles.secondary}>{notice}</Text>}
       {!loading && !error && requests.length === 0 && <View style={styles.emptyState}>

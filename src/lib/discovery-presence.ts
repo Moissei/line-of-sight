@@ -12,7 +12,9 @@ const LOCATION_CANCELLED_ERROR = 'Location acquisition cancelled.';
 // A pending native setup can outlive cancellation. Do not overlap its replacement.
 let androidAcquisitionBusy = false;
 function acquireAndroidLocation(signal?: AbortSignal): Promise<Location.LocationObject> {
-  if (androidAcquisitionBusy) return Promise.reject(new Error(LOCATION_UNAVAILABLE_ERROR));
+  if (androidAcquisitionBusy) {
+    return Promise.reject(new Error(LOCATION_UNAVAILABLE_ERROR));
+  }
   androidAcquisitionBusy = true;
   return new Promise((resolve, reject) => {
     const deadline = performance.now() + 8000;
@@ -47,13 +49,17 @@ function acquireAndroidLocation(signal?: AbortSignal): Promise<Location.Location
     if (!canContinue()) return;
     void (async () => {
       let cached: Location.LocationObject | null = null;
-      try { cached = await Location.getLastKnownPositionAsync({ maxAge: 3000, requiredAccuracy: 15 }); }
+      try { cached = await Location.getLastKnownPositionAsync({ maxAge: 3000, requiredAccuracy: 20 }); }
       catch { /* A cache failure still permits fresh acquisition. */ }
       if (!canContinue()) return;
       if (acceptableLocation(cached)) {
         finish(cached);
         return;
       }
+      await startWatch();
+    })().catch(() => finish(undefined, LOCATION_UNAVAILABLE_ERROR));
+    async function startWatch() {
+      if (!canContinue()) return;
       setupPending = true;
       try {
         subscription = await Location.watchPositionAsync({
@@ -64,7 +70,9 @@ function acquireAndroidLocation(signal?: AbortSignal): Promise<Location.Location
           if (acceptableLocation(location)) {
             finish(location);
           }
-        }, () => { if (canContinue()) finish(undefined, LOCATION_UNAVAILABLE_ERROR); });
+        }, () => {
+          if (canContinue()) finish(undefined, LOCATION_UNAVAILABLE_ERROR);
+        });
         if (settled) remove();
         else canContinue();
       } catch {
@@ -74,7 +82,7 @@ function acquireAndroidLocation(signal?: AbortSignal): Promise<Location.Location
         setupPending = false;
         if (settled) androidAcquisitionBusy = false;
       }
-    })().catch(() => finish(undefined, LOCATION_UNAVAILABLE_ERROR));
+    }
   });
 }
 
@@ -92,7 +100,6 @@ async function requestCurrentCoordinates(signal?: AbortSignal) {
   }
   if (!permission.granted) throw new Error(LOCATION_PERMISSION_ERROR);
   checkCancellation(signal);
-
   if (Platform.OS === 'android' && permission.android?.accuracy !== 'fine') {
     throw new Error(PRECISE_LOCATION_ERROR);
   }
@@ -125,8 +132,9 @@ function acceptableLocation(location: Location.LocationObject | null): location 
   const age = Date.now() - location.timestamp;
   const accuracy = location.coords.accuracy;
   return Number.isFinite(location.timestamp) && age >= 0 && age <= 3000 &&
-    typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy > 0 && accuracy <= 15;
+    typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy > 0 && accuracy <= 20;
 }
+
 
 type Presence = { is_active: boolean; expires_at: string | null; updated_at: string };
 
@@ -178,7 +186,6 @@ export async function setDiscoveryPresence(active: boolean, onLocationPending?: 
       expires_at: new Date(Date.now() + SESSION_DURATION_MS).toISOString(),
     }, { onConflict: 'user_id' })
     : table.update({ is_active: false }).eq('user_id', userId);
-
   // Request only non-sensitive status fields. single() detects a zero-row update,
   // including one silently denied by RLS, instead of falsely reporting STOP success.
   const { data, error } = await mutation.select('is_active, expires_at, updated_at').single();

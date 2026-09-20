@@ -1,4 +1,6 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 export type ProfilePhoto = Pick<ImagePickerAsset, 'uri' | 'file' | 'fileSize' | 'mimeType'>;
@@ -21,15 +23,14 @@ export async function readProfilePhoto(photo: ProfilePhoto) {
   let prepared: { body: ArrayBuffer; contentType: string } | undefined;
   let error: Error | undefined;
   try {
-    const { ImageManipulator, SaveFormat } = await import('expo-image-manipulator');
     let input = photo.uri;
     if (Platform.OS === 'web') {
       if (!photo.file) throw new Error(PHOTO_UPLOAD_ERROR);
       input = URL.createObjectURL(photo.file);
       cleanup.push(() => URL.revokeObjectURL(input));
     } else {
-      const { File } = await import('expo-file-system');
-      if (new File(input).size > PHOTO_MAX_BYTES) throw new Error(PHOTO_SIZE_ERROR);
+      const selected = new File(input);
+      if (selected.size > PHOTO_MAX_BYTES) throw new Error(PHOTO_SIZE_ERROR);
     }
     const context = ImageManipulator.manipulate(input);
     cleanup.push(() => context.release());
@@ -58,7 +59,6 @@ export async function readProfilePhoto(photo: ProfilePhoto) {
       if (blob.size > PHOTO_MAX_BYTES) throw new Error(PHOTO_SIZE_ERROR);
       body = await blob.arrayBuffer();
     } else {
-      const { File } = await import('expo-file-system');
       const output = new File(result.uri);
       cleanup.push(() => { if (output.exists) output.delete(); });
       if (output.size > PHOTO_MAX_BYTES) throw new Error(PHOTO_SIZE_ERROR);

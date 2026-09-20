@@ -19,10 +19,10 @@ export default function AuthenticatedTabs() {
         <SymbolView name={{ ios: 'safari', android: 'explore', web: 'explore' }} tintColor={color} size={23} />
       ) }} />
       <Tabs.Screen name="connections" options={{ title: 'Connections', tabBarIcon: ({ color }) => (
-        <SymbolView name={{ ios: 'person.2', android: 'group', web: 'group' }} tintColor={color} size={23} />
+        <SymbolView name={{ ios: 'bubble.left.and.bubble.right', android: 'forum', web: 'forum' }} tintColor={color} size={23} />
       ) }} />
       <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: ({ color }) => (
-        <SymbolView name={{ ios: 'envelope', android: 'mail', web: 'mail' }} tintColor={color} size={23} />
+        <SymbolView name={{ ios: 'person.badge.plus', android: 'person_add', web: 'person_add' }} tintColor={color} size={23} />
       ) }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color }) => (
         <SymbolView name={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }} tintColor={color} size={23} />

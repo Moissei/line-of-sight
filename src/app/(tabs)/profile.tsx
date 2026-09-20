@@ -1,7 +1,8 @@
+import { ProfilePhotoImage } from '@/components/profile-photo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useProfileStatus } from '@/components/profile-status-provider';
 import { ownPhotoPreviews, photoUser, PHOTO_POSITIONS, type PhotoPosition } from '@/lib/profile-photos';
@@ -21,6 +22,16 @@ export default function YourProfileScreen() {
   const [photos, setPhotos] = useState<Partial<Record<PhotoPosition, string>>>({});
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [photoExpiry, setPhotoExpiry] = useState<Partial<Record<PhotoPosition, number>>>({});
+  useEffect(() => {
+    const deadlines = PHOTO_POSITIONS.filter(position => photos[position]).map(position => photoExpiry[position] ?? 0);
+    if (!deadlines.length) return;
+    const timer = setTimeout(() => setPhotos(current => Object.fromEntries(
+      PHOTO_POSITIONS.filter(position => current[position] && (photoExpiry[position] ?? 0) > Date.now())
+        .map(position => [position, current[position]]),
+    )), Math.max(0, Math.min(...deadlines) - Date.now()));
+    return () => clearTimeout(timer);
+  }, [photos, photoExpiry]);
   useFocusEffect(useCallback(() => {
     void attempt; // Restart the focus load when the user retries.
     let cancelled = false;
@@ -36,11 +47,16 @@ export default function YourProfileScreen() {
         const { data, error: failure } = await supabase.from('profiles').select('first_name,date_of_birth,gender,bio,intents').eq('user_id', owner).abortSignal(abort.signal).maybeSingle();
         if (cancelled) return;
         if (failure) throw new Error('Unavailable');
-        if (!data) { await refresh(); return; }
+        if (!data) { setProfile(null); setPhotos({}); await refresh(); return; }
+        const signedAt = Date.now(); // Conservative: before any of the 600-second signing requests.
         const previews = await ownPhotoPreviews(owner, [...PHOTO_POSITIONS]);
         const currentOwner = await photoUser();
-        if (cancelled || currentOwner !== owner) return;
-        setProfile(data); setPhotos(previews);
+        if (cancelled) return;
+        if (currentOwner !== owner) { setProfile(null); setPhotos({}); return; }
+        setProfile(data);
+        if (Date.now() >= signedAt + 600000) { setPhotos({}); return; }
+        setPhotoExpiry(Object.fromEntries(PHOTO_POSITIONS.map(position => [position, signedAt + 600000])));
+        setPhotos(previews);
       } catch { if (!cancelled) setError(true); }
       finally { inFlight = false; }
     }
@@ -52,7 +68,10 @@ export default function YourProfileScreen() {
     return () => { cancelled = true; abort.abort(); clearInterval(timer); };
   }, [attempt, refresh]));
   const age = profile ? profileAge(profile.date_of_birth) : null;
-  const failedPhoto = (position: PhotoPosition) => setPhotos(current => { const next = { ...current }; delete next[position]; return next; });
+  const failedPhoto = (position: PhotoPosition, uri: string) => setPhotos(current => {
+    if (current[position] !== uri) return current;
+    const next = { ...current }; delete next[position]; return next;
+  });
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -65,7 +84,7 @@ export default function YourProfileScreen() {
       {error && <View><Text accessibilityRole="alert" style={styles.body}>We could not load your profile. Please try again.</Text><Pressable accessibilityRole="button" style={styles.gear} onPress={() => setAttempt(value => value + 1)}><Text style={styles.body}>Try again</Text></Pressable></View>}
       {!profile && !error && <Text style={styles.body}>Loading your profile...</Text>}
       {profile && <>
-        <ProfilePhotoPager photos={photos} onFailure={failedPhoto} />
+        <ProfilePhotoPager photos={photos} expiresAt={photoExpiry} onFailure={failedPhoto} />
         <View style={styles.detailsCard}>
         <View style={styles.identity}>
           <Text style={styles.name}>{profile.first_name}{age !== null ? `, ${age}` : ''}</Text>
@@ -80,7 +99,7 @@ export default function YourProfileScreen() {
     </ScrollView>
   </SafeAreaView>;
 }
-export function ProfilePhotoPager({ photos, onFailure }: { photos: Partial<Record<PhotoPosition, string>>; onFailure: (position: PhotoPosition) => void }) {
+export function ProfilePhotoPager({ photos, expiresAt = {}, onFailure }: { expiresAt?: Partial<Record<PhotoPosition, number>>; photos: Partial<Record<PhotoPosition, string>>; onFailure: (position: PhotoPosition, uri: string) => void }) {
   const positions = PHOTO_POSITIONS.filter(position => photos[position]);
   const [width, setWidth] = useState(0);
   const [foreground, setForeground] = useState(0);
@@ -103,7 +122,7 @@ export function ProfilePhotoPager({ photos, onFailure }: { photos: Partial<Recor
       {positions.map((position) => <Animated.View key={position} style={[styles.carouselCard, {
         width: cardWidth,
       }]}>
-        <Image source={{ uri: photos[position] }} accessibilityLabel="Your profile photo" style={styles.image} resizeMode="cover" onError={() => onFailure(position)} />
+        <ProfilePhotoImage uri={photos[position]!} expiresAt={expiresAt[position] ?? 0} onFailure={uri => onFailure(position, uri)} />
       </Animated.View>)}
     </Animated.ScrollView> : <View style={[styles.carouselCard, { width: '100%', alignSelf: 'center' }]}><SymbolView name={{ ios: 'person', android: 'person_outline', web: 'person_outline' }} size={64} tintColor="#8B988D" accessible={false} /></View>}
     {positions.length > 1 && <View style={styles.dots} accessible accessibilityLabel={`Photo ${Math.min(foreground, positions.length - 1) + 1} of ${positions.length}`}>

@@ -169,3 +169,10 @@ test('creation and editing retain the same shared photo upload path', () => {
   assert.match(read('src/components/profile-form.tsx'), /saveProfile\(draft, true\)/);
   assert.match(read('src/lib/profile.ts'), /saveSelectedPhotos\(data\.user\.id, draft\.photos/);
 });
+
+test('required photo APIs are static imports, with no dynamic acquisition in the save path', () => {
+  const source = fs.readFileSync(path.join(root, 'src/lib/profile-photo.ts'), 'utf8');
+  assert.match(source, /import \{ ImageManipulator, SaveFormat \} from 'expo-image-manipulator'/);
+  assert.match(source, /import \{ File \} from 'expo-file-system'/);
+  assert.doesNotMatch(source, /import\(/);
+});
