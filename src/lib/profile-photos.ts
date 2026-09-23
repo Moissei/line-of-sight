@@ -3,7 +3,9 @@ import { readProfilePhoto, type ProfilePhoto } from './profile-photo';
 
 export const PHOTO_POSITIONS = [1, 2, 3] as const;
 export type PhotoPosition = (typeof PHOTO_POSITIONS)[number];
-export type PhotoSelections = Partial<Record<PhotoPosition, ProfilePhoto>>;
+export type PhotoOperation = { kind: 'unchanged' } | { kind: 'replace'; photo: ProfilePhoto } | { kind: 'remove' };
+// An omitted slot is unchanged, never an implicit deletion.
+export type PhotoSelections = Partial<Record<PhotoPosition, PhotoOperation>>;
 const bucket = () => supabase.storage.from('profile-photos');
 
 export async function photoUser() {
@@ -21,7 +23,35 @@ async function metadata(userId: string, position: PhotoPosition) {
 
 // Read-only Storage listing distinguishes absent objects from request failures.
 // All paths are derived from the authenticated owner, never from UI input.
-export async function reconcilePhotos(userId: string) {
+export async function readOwnPhotoState(userId: string) {
+  const { data: profile, error: profileError } = await supabase.from('profiles')
+    .select('profile_photo_path').eq('user_id', userId).maybeSingle();
+  const { data: rows, error: rowsError } = await supabase.from('profile_photos')
+    .select('position,storage_path').eq('user_id', userId);
+  const { data: objects, error } = await bucket().list(userId, { limit: 100 });
+  if (profileError || rowsError || error || !objects) throw new Error('Photo state unavailable');
+  const names = new Set(objects.map((object) => object.name));
+  if (names.has('profile') && names.has('1')) throw new Error('Photo migration conflict');
+  const legacy = names.has('profile');
+  if (profile?.profile_photo_path && !legacy && !names.has('1')) throw new Error('Legacy photo requires recovery');
+  const positions = PHOTO_POSITIONS.filter(position => names.has(String(position)) ||
+    (position === 1 && legacy) || rows?.some(row => row.position === position));
+  return { positions, legacy, legacyReference: !!profile?.profile_photo_path };
+}
+
+// Used by the editor only: no migration, metadata repair, or Storage mutation.
+export async function readEditorPhotos(userId: string) {
+  const state = await readOwnPhotoState(userId);
+  const previews: Partial<Record<PhotoPosition, string>> = {};
+  for (const position of state.positions) {
+    const path = position === 1 && state.legacy ? 'profile' : String(position);
+    const { data, error } = await bucket().createSignedUrl(userId + '/' + path, 600);
+    if (!error && data) previews[position] = data.signedUrl;
+  }
+  return { positions: state.positions, previews };
+}
+
+export async function reconcilePhotos(userId: string, repairPositions: readonly PhotoPosition[] = PHOTO_POSITIONS) {
   const { data: profile, error: profileError } = await supabase.from('profiles')
     .select('profile_photo_path').eq('user_id', userId).maybeSingle();
   const { data: rows, error: rowsError } = await supabase.from('profile_photos')
@@ -41,7 +71,7 @@ export async function reconcilePhotos(userId: string) {
     names.add('1');
   }
   // Also repairs upload-success/metadata-failure and move-success/metadata-failure.
-  for (const position of PHOTO_POSITIONS) {
+  for (const position of repairPositions) {
     if (names.has(String(position))) await metadata(userId, position);
   }
   if (profile?.profile_photo_path) {
@@ -76,11 +106,20 @@ export async function removeOwnPhoto(expectedUser: string, position: PhotoPositi
 }
 
 export async function saveSelectedPhotos(userId: string, selections: PhotoSelections) {
-  await reconcilePhotos(userId);
+  const changed = PHOTO_POSITIONS.filter(position => selections[position] && selections[position]?.kind !== 'unchanged');
+  if (!changed.length) return;
+  if (await photoUser() !== userId) throw new Error('Photo account changed');
+  const state = await readOwnPhotoState(userId);
+  // Preserve legacy migration/recovery at Save, and only if the primary slot changes.
+  if (changed.includes(1) && (state.legacy || state.legacyReference)) await reconcilePhotos(userId, [1]);
   for (const position of PHOTO_POSITIONS) {
-    const photo = selections[position];
-    if (!photo) continue;
-    const { body, contentType } = await readProfilePhoto(photo);
+    const operation = selections[position];
+    if (!operation || operation.kind === 'unchanged') continue;
+    if (operation.kind === 'remove') {
+      await removeOwnPhoto(userId, position);
+      continue;
+    }
+    const { body, contentType } = await readProfilePhoto(operation.photo);
     if (await photoUser() !== userId) throw new Error('Photo account changed');
     const { error } = await bucket().upload(`${userId}/${position}`, body, { contentType, upsert: true });
     if (error) throw new Error('Photo upload incomplete');

@@ -72,6 +72,7 @@ export default function IncomingRequestsScreen() {
     }
   }
 
+
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <StatusBar style="dark" />
     <ScrollView contentContainerStyle={[styles.content, !loading && !error && requests.length === 0 && styles.emptyContent]}>
@@ -89,20 +90,23 @@ export default function IncomingRequestsScreen() {
         <Text style={styles.emptyTitle}>No requests yet</Text>
         <Text style={styles.emptyDescription}>When someone nearby wants to connect, their request will appear here.</Text>
       </View>}
-      {requests.map((request) => <View key={request.request_id} style={styles.card}>
+      {requests.map((request, index) => <View key={request.request_id} style={[styles.card, index < requests.length - 1 && styles.divider]}>
         <View style={styles.header}>
           <View style={styles.avatar} accessible={false}><View style={styles.head} /><View style={styles.shoulders} /></View>
-          <View style={styles.identity}><Text numberOfLines={2} ellipsizeMode="tail" style={styles.name}>{request.first_name}{request.age !== null ? `, ${request.age}` : ''}</Text>
-            {!!request.bio && <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardSecondary}>{request.bio}</Text>}
-            {!!request.gender && <Text numberOfLines={1} ellipsizeMode="tail" style={styles.cardSecondary}>{request.gender}</Text>}
+          <View style={styles.identity}><Text numberOfLines={2} ellipsizeMode="tail" style={styles.name}
+            accessibilityLabel={[request.first_name + (request.age !== null ? ', ' + request.age : ''), request.gender?.trim()].filter(Boolean).join(', ')}>
+            {request.first_name}{request.age !== null ? ', ' + request.age : ''}
+            {!!request.gender?.trim() && <Text style={[styles.identityGender, request.gender.trim().toLowerCase() === 'female' && styles.femaleSymbol, request.gender.trim().toLowerCase() === 'male' && styles.maleSymbol]}>{' '}{request.gender.trim().toLowerCase() === 'female' ? '\u2640\uFE0E' : request.gender.trim().toLowerCase() === 'male' ? '\u2642\uFE0E' : request.gender.trim()}</Text>}
+          </Text>
+            {!!request.bio?.trim() && <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardSecondary}>{request.bio.trim()}</Text>}
             {request.intents.length > 0 && <View style={styles.intents}>{request.intents.map((intent, index) => <Text key={index} style={styles.chip}>{intent}</Text>)}</View>}
           </View>
         </View>
         <View style={styles.actions}>{(['accepted', 'declined'] as const).map((response) => <Pressable key={response}
-          accessibilityRole="button" disabled={busyId !== null} accessibilityState={{ disabled: busyId !== null, busy: busyId === request.request_id }}
-          onPress={() => void respond(request.request_id, response)}
+          accessibilityRole="button" accessibilityLabel={`${response === 'accepted' ? 'Accept' : 'Decline'} request from ${request.first_name}`} disabled={busyId !== null} accessibilityState={{ disabled: busyId !== null, busy: busyId === request.request_id }}
+          hitSlop={{ top: 4, bottom: 4 }} onPress={() => void respond(request.request_id, response)}
           style={[styles.button, response === 'declined' && styles.outline, busyId !== null && styles.disabled]}>
-          <Text style={[styles.buttonText, response === 'declined' && styles.linkText]}>{response === 'accepted' ? 'ACCEPT' : 'DECLINE'}</Text>
+          <Text style={[styles.buttonText, response === 'declined' && styles.linkText]}>{response === 'accepted' ? 'Accept' : 'Decline'}</Text>
         </Pressable>)}</View>
         {busyId === request.request_id && <Text style={styles.secondary}>Updating request...</Text>}
       </View>)}
@@ -121,12 +125,15 @@ const styles = StyleSheet.create({
   connectionLine: { width: 28, height: 1, backgroundColor: '#B59962' },
   emptyTitle: { fontSize: 21, lineHeight: 28, fontWeight: '600', color: '#202D25', textAlign: 'center', marginBottom: 10 },
   emptyDescription: { maxWidth: 280, fontSize: 15, lineHeight: 23, color: '#656D66', textAlign: 'center' },
-  linkText: { color: '#253D2F', fontSize: 14, fontWeight: '600' },
-  card: { backgroundColor: '#FEFCF8', borderWidth: 1, borderColor: '#253D2F', borderRadius: 18, padding: 16, gap: 12 }, header: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' }, identity: { flex: 1, minWidth: 0, gap: 4 },
+  linkText: { color: '#A65F5F' },
+  card: { paddingVertical: 16, gap: 14 }, divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D6DCD4' }, header: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' }, identity: { flex: 1, minWidth: 0, gap: 4 },
   name: { fontSize: 21, lineHeight: 27, fontWeight: '600', color: '#202D25' }, avatar: { width: 90, height: 114, flexShrink: 0, borderRadius: 12, overflow: 'hidden', backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center', gap: 4 },
   head: { width: 17, height: 17, borderRadius: 9, backgroundColor: '#8B988D' }, shoulders: { width: 34, height: 18, borderRadius: 9, backgroundColor: '#8B988D' },
+  identityGender: { fontSize: 18, fontWeight: '400', color: '#656D66' },
+  femaleSymbol: { fontSize: 20, fontWeight: '500', color: '#B86F7C' },
+  maleSymbol: { fontSize: 20, fontWeight: '500', color: '#647FA3' },
   cardSecondary: { fontSize: 14, lineHeight: 20, color: '#656D66' },
-  intents: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingTop: 6 }, chip: { maxWidth: '100%', backgroundColor: '#253D2F', color: '#FEFCF8', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10, fontSize: 12, lineHeight: 17 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, button: { flex: 1, minWidth: 90, minHeight: 48, padding: 12, borderRadius: 12, backgroundColor: '#253D2F', justifyContent: 'center', alignItems: 'center' },
-  outline: { backgroundColor: 'transparent' }, buttonText: { color: '#FEFCF8', fontSize: 13, fontWeight: '700' }, disabled: { opacity: 0.6 },
+  intents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { maxWidth: '100%', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#EEF1E9', color: '#253D2F', fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  actions: { marginTop: -14, marginLeft: 104, paddingVertical: 4, flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, button: { maxWidth: '100%', minWidth: 90, minHeight: 36, paddingVertical: 6, paddingHorizontal: 18, borderRadius: 12, borderWidth: 1, borderColor: '#3F6B50', backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' },
+  outline: { borderColor: '#A65F5F' }, buttonText: { color: '#3F6B50', fontSize: 14, fontWeight: '600' }, disabled: { opacity: 0.6 },
 });

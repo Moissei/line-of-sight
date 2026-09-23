@@ -145,7 +145,7 @@ function uploads(f, owner = 'owner') {
 test('all three slots and replacements sanitize with canonical owner paths, upsert and metadata ordering', async () => {
   const f = fixture();
   const u = uploads(f);
-  for (let round = 0; round < 2; round++) await u.api.saveSelectedPhotos('owner', { 1: f.photo, 2: f.photo, 3: f.photo });
+  for (let round = 0; round < 2; round++) await u.api.saveSelectedPhotos('owner', { 1: { kind: 'replace', photo: f.photo }, 2: { kind: 'replace', photo: f.photo }, 3: { kind: 'replace', photo: f.photo } });
   assert.equal(u.events.length, 12);
   for (let i = 0; i < 6; i++) {
     const position = i % 3 + 1;
@@ -158,7 +158,7 @@ test('all three slots and replacements sanitize with canonical owner paths, upse
 test('sanitization failure and changed owner each prevent upload and metadata writes', async () => {
   for (const [f, owner] of [[fixture({ fail: 'encode' }), 'owner'], [fixture(), 'different-owner']]) {
     const u = uploads(f, owner);
-    await assert.rejects(u.api.saveSelectedPhotos('owner', { 1: f.photo }));
+    await assert.rejects(u.api.saveSelectedPhotos('owner', { 1: { kind: 'replace', photo: f.photo } }));
     assert.deepEqual(u.events, []);
   }
 });

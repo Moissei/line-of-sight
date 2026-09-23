@@ -45,6 +45,10 @@ test('carousel keeps stable slot keys and native snapping for one/two/three phot
     let nodes = render();
     assert.deepEqual(nodes.filter(n => n.type === 'PreparedImage').map(n => n.props.uri), Object.keys(photos).map(k => photos[k]));
     const count = Object.keys(photos).length;
+    const backs = nodes.filter(n => n.props?.pointerEvents === 'none');
+    assert.equal(backs.length, 0);
+    assert.doesNotMatch(source, /stackBack|stackFront/);
+    assert.equal(nodes.filter(n => n.type === 'PreparedImage').length, count);
     assert.equal(nodes.filter(n => n.type === 'AnimatedView').length, count);
     assert.equal(nodes.filter(n => n.props?.style === undefined ? false : Array.isArray(n.props.style) && n.props.style[0]?.width === 5).length, count > 1 ? count : 0);
     assert.doesNotMatch(source, /zIndex|translateX|scale:/);
@@ -52,6 +56,7 @@ test('carousel keeps stable slot keys and native snapping for one/two/three phot
     assert.deepEqual(nodes.filter(n => n.type === 'AnimatedView').map(n => Number(n.key)), Object.keys(photos).map(Number));
     const pager = nodes.find(n => n.type === 'AnimatedScrollView');
     if (count) {
+      assert.equal(pager.props.style.height, 260 / 0.94);
       assert.equal(pager.props.horizontal, true);
       assert.equal(pager.props.scrollEnabled, count > 1);
       assert.equal(pager.props.snapToInterval, 278);
@@ -70,13 +75,33 @@ test('carousel keeps stable slot keys and native snapping for one/two/three phot
   }
 });
 
-test('details card contains identity and bio but excludes edit action', () => {
-  const card = source.slice(source.indexOf('<View style={styles.detailsCard}>'), source.indexOf('<Pressable accessibilityRole="button" style={({ pressed }) => [styles.edit'));
-  assert.match(card, /styles.identity/);
-  assert.match(card, /styles.chips/);
-  assert.match(card, /styles.glimpse/);
-  assert.match(card, /<\/View>\s*<\/View>\s*$/);
+test('open identity layout has compact Edit and preserves dynamic profile fields', () => {
+  const details = source.slice(source.indexOf('<View style={styles.details}>'), source.indexOf('export function ProfilePhotoPager'));
+  assert.match(details, /styles.nameRow/);
+  assert.match(details, /accessibilityLabel="Edit Profile"/);
+  assert.match(details, /router.push\('\/edit-profile'\)/);
+  assert.match(details, />Edit<\/Text>/);
+  assert.match(details, /styles.chips/);
+  assert.match(details, /styles.glimpse/);
+  assert.doesNotMatch(source, /detailsCard|EDIT PROFILE/);
   assert.match(source, /genderSymbol: \{ fontSize: 20/);
-  assert.match(source, /styles.genderSymbol/);
   assert.ok(source.includes("profile.gender === 'Male' || profile.gender === 'Female'"));
+  assert.match(source, /edit: \{ minHeight: 44/);
+  assert.match(source, /photoGroup: \{ width: '100%'/);
+  assert.match(source, /carouselCard: \{ aspectRatio: 0\.94/);
+});
+
+
+test('Profile uses system typography with pre-trial weights and preserves branding font loading', () => {
+  assert.doesNotMatch(source, /fontFamily/);
+  for (const [key, weight] of Object.entries({ headerLabel: '600', name: '600', chip: '500', sectionTitle: '500', editText: '600' })) {
+    const declaration = source.match(new RegExp(key + ': [{] ([^}]+)'))[1];
+    assert.ok(declaration.includes("fontWeight: '" + weight + "'"));
+  }
+  for (const key of ['subtitle', 'body']) {
+    assert.doesNotMatch(source.match(new RegExp(key + ': [{] ([^}]+)'))[1], /fontWeight/);
+  }
+  const root = require('node:fs').readFileSync('src/app/_layout.tsx', 'utf8');
+  assert.ok(root.includes("'Tangerine-Bold': require('@/assets/fonts/Tangerine-Bold.ttf')"));
+  assert.ok(root.includes('if (!fontsLoaded || !auth.ready) return null;'));
 });

@@ -85,16 +85,21 @@ export default function YourProfileScreen() {
       {!profile && !error && <Text style={styles.body}>Loading your profile...</Text>}
       {profile && <>
         <ProfilePhotoPager photos={photos} expiresAt={photoExpiry} onFailure={failedPhoto} />
-        <View style={styles.detailsCard}>
+        <View style={styles.details}>
         <View style={styles.identity}>
+          <View style={styles.nameRow}>
           <Text style={styles.name}>{profile.first_name}{age !== null ? `, ${age}` : ''}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Edit Profile" style={({ pressed }) => [styles.edit, pressed && { opacity: 0.75 }]} onPress={() => router.push('/edit-profile')}>
+              <SymbolView name={{ ios: 'pencil', android: 'edit', web: 'edit' }} size={15} tintColor="#253D2F" accessible={false} />
+              <Text style={styles.editText}>Edit</Text>
+            </Pressable>
+          </View>
           {!!profile.gender && <Text style={styles.body}>{(profile.gender === 'Male' || profile.gender === 'Female') && <Text style={styles.genderSymbol}>{profile.gender === 'Male' ? '\u2642' : '\u2640'} </Text>}{profile.gender}</Text>}
         </View>
         <View style={styles.chips}>{PROFILE_INTENTS.filter(intent => profile.intents?.includes(intent)).map(intent => <Text key={intent} style={styles.chip}>{intent}</Text>)}</View>
         <View style={styles.detailsDivider} />
         <View style={styles.glimpse}><Text style={styles.sectionTitle}>A glimpse</Text><Text style={styles.body}>{profile.bio?.trim() || 'Add a glimpse of yourself'}</Text></View>
         </View>
-        <Pressable accessibilityRole="button" style={({ pressed }) => [styles.edit, pressed && { opacity: 0.75 }]} onPress={() => router.push('/edit-profile')}><Text style={styles.editText}>EDIT PROFILE</Text></Pressable>
       </>}
     </ScrollView>
   </SafeAreaView>;
@@ -116,7 +121,7 @@ export function ProfilePhotoPager({ photos, expiresAt = {}, onFailure }: { expir
     {positions.length ? <Animated.ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false}
       scrollEnabled={positions.length > 1} snapToInterval={step} decelerationRate="fast" disableIntervalMomentum
       contentContainerStyle={{ paddingHorizontal: (width - cardWidth) / 2, gap: 18, alignItems: 'center' }}
-      style={{ height: cardWidth / 0.9 }} scrollEventThrottle={16}
+      style={{ height: cardWidth / 0.94 }} scrollEventThrottle={16}
       onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: offset } } }], { useNativeDriver: true, listener: (event: { nativeEvent: { contentOffset: { x: number } } }) => setForeground(Math.max(0, Math.min(positions.length - 1, Math.round(event.nativeEvent.contentOffset.x / step)))) })}
       onMomentumScrollEnd={event => { page.current = Math.max(0, Math.min(positions.length - 1, Math.round(event.nativeEvent.contentOffset.x / step))); }}>
       {positions.map((position) => <Animated.View key={position} style={[styles.carouselCard, {
@@ -133,25 +138,25 @@ export function ProfilePhotoPager({ photos, expiresAt = {}, onFailure }: { expir
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
-  content: { width: '100%', maxWidth: 460, alignSelf: 'center', paddingHorizontal: 28, paddingTop: 12, paddingBottom: 36, gap: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',  },
+  content: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: 28, paddingTop: 12, paddingBottom: 36, gap: 20 },
+  header: { width: '100%', maxWidth: 404, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',  },
   gear: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
-  headerLabel: { flex: 1, fontSize: 28, fontWeight: '600', color: '#253D2F' },
+  headerLabel: { flex: 1, fontSize: 27, color: '#253D2F', fontWeight: '600' },
   accountText: { fontSize: 14, fontWeight: '500', color: '#253D2F' },
-  subtitle: { fontSize: 15, lineHeight: 22, color: '#656D66', marginTop: -16 },
-  photoGroup: { width: '78.4%', maxWidth: 282, alignSelf: 'center', marginTop: 14 },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
+  subtitle: { width: '100%', maxWidth: 404, alignSelf: 'center', fontSize: 15, lineHeight: 22, color: '#656D66', marginTop: -16 },
+  photoGroup: { width: '100%', alignSelf: 'center', marginTop: 4 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 15 },
   dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#CDD2CB' },
   activeDot: { backgroundColor: '#253D2F' },
-  carouselCard: { aspectRatio: 9 / 10, borderRadius: 15, overflow: 'hidden', backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center' },
-  image: { width: '100%', height: '100%' },
-  detailsCard: { borderWidth: 1, borderColor: '#D6DCD4', borderRadius: 18, padding: 18, gap: 18, backgroundColor: '#FEFCF8' },
+  carouselCard: { aspectRatio: 0.94, borderRadius: 22, overflow: 'hidden', backgroundColor: '#EBEEE7', alignItems: 'center', justifyContent: 'center' },
+  details: { paddingHorizontal: 4, paddingTop: 0, marginTop: -3, gap: 20 },
   detailsDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#D6DCD4' },
   genderSymbol: { fontSize: 20, lineHeight: 25 },
-  identity: { gap: 6 },
-  name: { fontSize: 28, fontWeight: '600', color: '#202D25' }, body: { fontSize: 15, lineHeight: 23, color: '#656D66' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, chip: { maxWidth: '100%', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: '#253D2F', color: '#FEFCF8', fontSize: 12, lineHeight: 17 },
-  glimpse: { gap: 8 }, sectionTitle: { fontSize: 17, fontWeight: '600', color: '#253D2F' },
-  edit: { minHeight: 58, padding: 18, borderRadius: 16, backgroundColor: '#253D2F', alignItems: 'center', justifyContent: 'center', marginTop: -8 },
-  editText: { color: '#FEFCF8', fontSize: 14, fontWeight: '700', letterSpacing: 1.5 },
+  identity: { gap: 8 },
+  nameRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
+  name: { flexGrow: 1, flexShrink: 1, minWidth: 0, fontSize: 30, color: '#202D25', fontWeight: '600' }, body: { fontSize: 15, lineHeight: 23, color: '#656D66' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { maxWidth: '100%', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#EEF1E9', color: '#253D2F', fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  glimpse: { gap: 8 }, sectionTitle: { fontSize: 17, color: '#253D2F', fontWeight: '500' },
+  edit: { minHeight: 44, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 24, borderWidth: 1, borderColor: '#CDD5C7', flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  editText: { color: '#253D2F', fontSize: 13, fontWeight: '600' },
 });
