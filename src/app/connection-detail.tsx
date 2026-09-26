@@ -194,7 +194,7 @@ export default function ConnectionDetailScreen() {
             <Text accessibilityRole="alert" style={styles.errorText}>Couldn{'’'}t load messages. Please try again.</Text>
             <Pressable accessibilityRole="button" style={styles.retry} onPress={() => void refresh()}><Text style={styles.link}>Retry</Text></Pressable>
           </View>}
-          <FlatList ref={list} data={messages} keyExtractor={(message) => message.message_id}
+          <FlatList ref={list} style={styles.messageViewport} data={messages} keyExtractor={(message) => message.message_id}
             contentContainerStyle={[styles.messageList, messages.length === 0 && styles.emptyList]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor="#253D2F" />}
             ListHeaderComponent={hasEarlier ? <Pressable accessibilityRole="button" disabled={loadingEarlier}
@@ -202,16 +202,7 @@ export default function ConnectionDetailScreen() {
               <Text style={styles.link}>{loadingEarlier ? 'LOADING...' : 'LOAD EARLIER MESSAGES'}</Text>
             </Pressable> : null}
             ListEmptyComponent={<Text style={styles.empty}>No messages yet. Say hello.</Text>}
-            renderItem={({ item, index }) => <View style={[styles.bubbleRow, item.sender_is_me && styles.outgoingRow,
-              { marginTop: index === 0 ? 0 : messages[index - 1].sender_is_me === item.sender_is_me
-                && Math.abs(Date.parse(item.created_at) - Date.parse(messages[index - 1].created_at)) <= 5 * 60 * 1000 ? 4 : 12 }]}>
-              <View style={[styles.bubble, item.sender_is_me ? styles.outgoingBubble : styles.incomingBubble]}>
-                <Text style={[styles.body, item.sender_is_me && styles.outgoingBody]}>{item.body}</Text>
-                <Text style={[styles.time, item.sender_is_me && styles.outgoingTime]}>
-                  {new Date(item.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                </Text>
-              </View>
-            </View>}
+            renderItem={({ item, index }) => <ChatMessage item={item} previous={messages[index - 1]} next={messages[index + 1]} />}
           />
           {sendError && <Text accessibilityRole="alert" style={styles.sendError}>Couldn{'’'}t send message. Please try again.</Text>}
           <View style={styles.composer}>
@@ -220,7 +211,7 @@ export default function ConnectionDetailScreen() {
               onChangeText={(value) => { setDraft(value); if (sendError) setSendError(false); }} style={styles.input} />
             <Pressable accessibilityRole="button" accessibilityLabel="Send message" disabled={!canSend}
               accessibilityState={{ disabled: !canSend, busy: sending }}
-              onPress={() => void submit()} style={({ pressed }) => [styles.send, (!canSend || pressed) && styles.sendDisabled]}>
+              onPress={() => void submit()} style={({ pressed }) => [styles.send, !canSend && styles.sendDisabled, pressed && { opacity: 0.7 }]}>
               {sending ? <ActivityIndicator size="small" color="#FEFCF8" />
                 : <SymbolView name={{ ios: 'paperplane.fill', android: 'send', web: 'send' }} size={21} tintColor="#FEFCF8" accessible={false} />}
             </Pressable>
@@ -231,6 +222,23 @@ export default function ConnectionDetailScreen() {
   </SafeAreaView>;
 }
 
+function sameMessageRun(first: Message | undefined, second: Message | undefined) {
+  return !!first && !!second && first.sender_is_me === second.sender_is_me &&
+    Math.abs(Date.parse(second.created_at) - Date.parse(first.created_at)) <= 5 * 60 * 1000;
+}
+
+export function ChatMessage({ item, previous, next }: { item: Message; previous?: Message; next?: Message }) {
+  return <View style={[styles.bubbleRow, item.sender_is_me && styles.outgoingRow,
+    { marginTop: !previous ? 0 : sameMessageRun(previous, item) ? 4 : 12 }]}>
+    <View style={[styles.bubble, item.sender_is_me ? styles.outgoingBubble : styles.incomingBubble]}>
+      <Text style={[styles.body, item.sender_is_me && styles.outgoingBody]}>{item.body}</Text>
+    </View>
+    {!sameMessageRun(item, next) && <Text style={[styles.time, item.sender_is_me && styles.outgoingTime]}>
+      {new Date(item.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+    </Text>}
+  </View>;
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' }, content: { flex: 1, width: '100%', maxWidth: 620, alignSelf: 'center', paddingHorizontal: 18 },
   header: { minHeight: 62, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E1E4DE' },
@@ -238,13 +246,14 @@ const styles = StyleSheet.create({
   link: { fontSize: 13, fontWeight: '700', color: '#253D2F' }, text: { fontSize: 15, lineHeight: 22, color: '#656D66', textAlign: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 }, retry: { minWidth: 44, minHeight: 44, justifyContent: 'center' },
   errorRow: { paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 }, errorText: { flexShrink: 1, fontSize: 13, color: '#7A3E36' },
-  messageList: { flexGrow: 1, paddingVertical: 16 }, emptyList: { justifyContent: 'center' }, empty: { color: '#656D66', fontSize: 16, textAlign: 'center' },
-  earlier: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, bubbleRow: { flexDirection: 'row', justifyContent: 'flex-start' }, outgoingRow: { justifyContent: 'flex-end' },
-  bubble: { maxWidth: '78%', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 11, gap: 5 }, incomingBubble: { backgroundColor: '#F1F2EC', borderWidth: 1, borderColor: '#DEE3D9', borderBottomLeftRadius: 6 },
-  outgoingBubble: { backgroundColor: '#253D2F', borderBottomRightRadius: 6 }, body: { color: '#202D25', fontSize: 16, lineHeight: 22 }, outgoingBody: { color: '#FEFCF8' },
-  time: { color: '#778079', fontSize: 10, textAlign: 'right' }, outgoingTime: { color: '#D6DDD7' }, sendError: { color: '#7A3E36', fontSize: 13, textAlign: 'center', paddingVertical: 6 },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, borderTopWidth: 1, borderTopColor: '#E1E4DE', paddingVertical: 12 },
-  input: { flex: 1, minHeight: 48, maxHeight: 120, borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12, color: '#202D25', fontSize: 16 },
+  messageViewport: { marginHorizontal: -2 },
+  messageList: { flexGrow: 1, justifyContent: 'flex-start', paddingVertical: 12 }, emptyList: { justifyContent: 'center' }, empty: { color: '#656D66', fontSize: 16, textAlign: 'center' },
+  earlier: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, bubbleRow: { width: '100%', alignItems: 'flex-start', gap: 4 }, outgoingRow: { alignItems: 'flex-end' },
+  bubble: { maxWidth: '78%', borderRadius: 14, paddingHorizontal: 15, paddingVertical: 8 }, incomingBubble: { backgroundColor: '#E4E7E3' },
+  outgoingBubble: { backgroundColor: '#E2E9E0' }, body: { color: '#202D25', fontSize: 16, lineHeight: 22 }, outgoingBody: { color: '#202D25' },
+  time: { color: '#808880', fontSize: 11, lineHeight: 16, textAlign: 'left' }, outgoingTime: { textAlign: 'right' }, sendError: { color: '#7A3E36', fontSize: 13, textAlign: 'center', paddingVertical: 6 },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, borderTopWidth: 1, borderTopColor: '#E1E4DE', paddingVertical: 10 },
+  input: { flex: 1, minHeight: 48, maxHeight: 120, borderWidth: 1, borderColor: '#C9CEC7', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FEFCF8', color: '#202D25', fontSize: 16 },
   send: { width: 48, height: 48, flexShrink: 0, borderRadius: 24, backgroundColor: '#253D2F', alignItems: 'center', justifyContent: 'center' },
-  sendDisabled: { opacity: 0.48 },
+  sendDisabled: { backgroundColor: '#9AA79C' },
 });
