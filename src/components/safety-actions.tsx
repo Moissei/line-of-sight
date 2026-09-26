@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ACTION_ERROR, BLOCK_TITLE, blockDescription, performSafetyAction, REPORT_REASONS, runSafetyAction, validReport, type SafetyTarget } from '@/lib/safety-actions';
 
-export function SafetyActions({ target, onBlocked, trigger }: { target: SafetyTarget; onBlocked: () => void; trigger?: ReactNode }) {
+export function SafetyActions({ target, onBlocked, trigger, quiet = false }: { target: SafetyTarget; onBlocked: () => void; trigger?: ReactNode; quiet?: boolean }) {
   const [mode, setMode] = useState<'more' | 'block' | 'report' | 'success' | null>(null);
   const [reason, setReason] = useState('');
   const [details, setDetails] = useState('');
@@ -22,8 +22,8 @@ export function SafetyActions({ target, onBlocked, trigger }: { target: SafetyTa
     });
   }
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel="More safety actions" style={styles.control}
-      onPress={() => { setError(false); setMode('more'); }}>{trigger ?? <Text style={styles.link}>More</Text>}</Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="More safety actions" style={[styles.control, quiet && styles.quiet]}
+      onPress={() => { setError(false); setMode('more'); }}>{trigger ?? <Text style={[styles.link, quiet && styles.quietLabel]}>{quiet ? 'Safety options' : 'More'}</Text>}</Pressable>
     <Modal visible={mode !== null} transparent animationType="fade" onRequestClose={close}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.modal} accessibilityViewIsModal>
@@ -58,6 +58,8 @@ export function SafetyActions({ target, onBlocked, trigger }: { target: SafetyTa
 }
 const styles = StyleSheet.create({
   control: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
+  quietLabel: { color: '#656D66', fontWeight: '500' },
+  quiet: { maxWidth: '100%', minHeight: 48, paddingHorizontal: 14, paddingVertical: 10 },
   link: { color: '#253D2F', fontSize: 14, fontWeight: '600' },
   overlay: { flex: 1, backgroundColor: 'rgba(20,30,22,0.45)', justifyContent: 'center', padding: 20 },
   modal: { width: '100%', maxWidth: 440, maxHeight: '90%', alignSelf: 'center', borderRadius: 20, backgroundColor: '#FEFCF8' },

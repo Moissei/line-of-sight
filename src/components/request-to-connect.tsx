@@ -43,14 +43,14 @@ export function RequestToConnect({ targetUserId, revision = 0 }: { targetUserId:
       accessibilityState={{ disabled: status !== 'ready', busy: status === 'checking' || status === 'sending' }}
       accessibilityHint={status === 'checking' ? 'Checking for an existing request' : undefined}
       onPress={() => void send()} style={({ pressed }) => [styles.button, (pressed || status !== 'ready') && styles.muted]}>
-      <Text style={styles.label}>{status === 'sent' ? 'REQUEST SENT' : status === 'sending' ? 'SENDING...' : 'REQUEST TO CONNECT'}</Text>
+      <Text style={styles.label}>{status === 'sent' ? 'Request sent' : status === 'sending' ? 'Sending...' : 'Connect'}</Text>
     </Pressable>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
   </View>;
 }
 const styles = StyleSheet.create({
-  container: { gap: 8 },
-  button: { minHeight: 48, borderRadius: 12, padding: 14, backgroundColor: '#253D2F', alignItems: 'center', justifyContent: 'center' },
-  label: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1, textAlign: 'center' },
+  container: { width: '100%', gap: 8 },
+  button: { minWidth: 140, minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: '#3F6B50', padding: 14, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  label: { color: '#3F6B50', fontSize: 14, lineHeight: 20, fontWeight: '600', textAlign: 'center' },
   muted: { opacity: 0.6 }, error: { fontSize: 13, lineHeight: 19, color: '#656D66' },
 });

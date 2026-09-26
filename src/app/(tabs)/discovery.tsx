@@ -6,7 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { presenceErrorMessage, readDiscoveryPresence, setDiscoveryPresence } from '@/lib/discovery-presence';
 import { NearbyResult, pollNearbyDiscovery } from '@/lib/nearby-discovery';
-import { NearbyProfileCard } from '@/components/nearby-profile-card';
+import { NearbyProfileCard, NearbySafetyOptions } from '@/components/nearby-profile-card';
 import { DiscoveryBrand } from '@/components/discovery-brand';
 
 export default function DiscoveryScreen() {
@@ -15,7 +15,6 @@ export default function DiscoveryScreen() {
   const [isLooking, setIsLooking] = useState(false);
   const [locationPending, setLocationPending] = useState(false);
   const [busy, setBusy] = useState(true);
-  const [statusLift, setStatusLift] = useState(0);
   const [error, setError] = useState('');
   const inFlight = useRef(false);
   const startController = useRef<AbortController | null>(null);
@@ -33,6 +32,8 @@ export default function DiscoveryScreen() {
   const spacing = short ? 8 : compact ? 16 : 24;
   const titleSize = Math.min(short ? 44 : 56, (width - insets.left - insets.right - 56) / 6);
   const showSearchStatus = isLooking && !busy && presenceReady && nearby?.status === 'ready' && nearby.profiles.length === 0;
+
+  const populated = isLooking && !busy && presenceReady && nearby?.status === 'ready' && nearby.profiles.length > 0;
 
   // Returning checks the existing row; it never starts a session. Do not reset the
   // UI to inactive on blur while a real database row may still be active.
@@ -138,8 +139,8 @@ export default function DiscoveryScreen() {
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
             onPress={() => void toggleLooking()}
-            style={({ pressed }) => [styles.button, { minHeight: compact ? 48 : 58, paddingVertical: compact ? 12 : 18 }, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.buttonLabel}>{isLooking ? 'STOP LOOKING' : 'START LOOKING'}</Text>
+            style={({ pressed }) => [styles.button, isLooking && styles.stopButton, populated && styles.pairedAction, (pressed || busy) && styles.pressed]}>
+            <Text style={[styles.buttonLabel, isLooking && styles.stopLabel, populated && styles.pairedLabel]}>{isLooking ? 'Stop looking' : 'Start looking'}</Text>
           </Pressable>
         </View>
   );
@@ -151,29 +152,21 @@ export default function DiscoveryScreen() {
         <DiscoveryBrand active={isLooking} fontSize={titleSize} compact={compact}
           width={Math.max(0, Math.min(404, width - insets.left - insets.right - 56))} />
 
-        <ScrollView style={styles.scroll} contentContainerStyle={[styles.main, { gap: spacing }, !isLooking && { paddingVertical: compact ? 24 : 48 }]}>
-          <View onLayout={({ nativeEvent }) => setStatusLift(Math.min(38, Math.max(0, nativeEvent.layout.y - 12)))}
-            style={[styles.statusGroup, { gap: spacing }, isLooking && { transform: [{ translateY: -statusLift }] }]}>
-            <View style={[styles.badge, isLooking ? styles.activeBadge : styles.inactiveBadge]}>
-              <View style={[styles.dot, isLooking && styles.activeDot]} />
-              <Text style={[styles.badgeLabel, isLooking && styles.activeLabel]}>
-                {isLooking ? 'SESSION ACTIVE' : 'SESSION INACTIVE'}
+        <ScrollView style={styles.scroll} contentContainerStyle={[styles.main, { gap: spacing }, (!isLooking || showSearchStatus) && { justifyContent: 'flex-start', paddingTop: Math.min(64, Math.max(24, (height - insets.top - insets.bottom) * 0.07)) }, populated && { justifyContent: 'flex-start', paddingTop: 4, gap: 8 }]}>
+          {populated && <Text style={styles.description}>{"You're visible to others who are looking too."}</Text>}
+          {!populated && <View style={styles.statusGroup} accessibilityLiveRegion="polite" accessible>
+            <View style={styles.stateHeading}>
+              {isLooking && <View style={styles.dot} accessible={false} />}
+              <Text accessibilityRole="header" style={[styles.statusTitle, { fontSize: short ? 20 : 22 }]}>
+                {isLooking ? 'Looking nearby' : 'Ready to be seen?'}
               </Text>
             </View>
-
-            <View style={[styles.message, !isLooking && styles.inactiveMessage]} accessibilityLiveRegion="polite" accessible>
-              {isLooking && <Text style={[styles.statusTitle, { fontSize: short ? 20 : 22 }]}>
-                  You are discoverable
-              </Text>}
-              <Text style={[styles.description, !isLooking && styles.inactiveDescription, { fontSize: short ? 14 : 16, lineHeight: short ? 20 : 24 }, isLooking && styles.activeDescription]}>
-                {isLooking
-                  ? 'You’re visible to nearby users while Line of Sight looks for others who are active nearby.'
-                  : 'You are not currently visible to nearby users. Start looking when you are ready to connect.'}
-              </Text>
-            </View>
-          </View>
+            <Text style={styles.description}>
+              {isLooking ? "You're visible to others who are looking too." : "You're hidden until you start looking."}
+            </Text>
+          </View>}
           {isLooking && !busy && presenceReady && !showSearchStatus && (
-            <View style={[styles.nearbySection, { paddingTop: short ? 4 : compact ? 12 : 20 }]} accessibilityLiveRegion="polite">
+            <View style={[styles.nearbySection, { paddingTop: populated ? 0 : short ? 4 : compact ? 12 : 20 }]} accessibilityLiveRegion="polite">
               <Text style={[
                 styles.nearbyMessage,
                 { fontSize: compact ? 16 : 18, lineHeight: compact ? 23 : 26 },
@@ -187,18 +180,23 @@ export default function DiscoveryScreen() {
                   : 'Someone is in your line of sight'}
               </Text>
               {nearby?.status === 'ready' && nearby.profiles.map((profile) => (
-                <NearbyProfileCard key={profile.user_id} profile={profile} onBlocked={() => removeBlockedProfile(profile.user_id)} />
+                <NearbyProfileCard key={profile.user_id} profile={profile} sessionAction={actionArea} onBlocked={() => removeBlockedProfile(profile.user_id)} />
               ))}
             </View>
           )}
-          {!isLooking && (
-            <View style={[styles.inactiveAction, { paddingTop: compact ? 16 : 24 }]}>
+          {(!populated && (!isLooking || showSearchStatus)) && (
+            <View style={[styles.inactiveAction, { paddingTop: populated ? 24 : compact ? 8 : 16 }]}>
               {actionArea}
             </View>
           )}
+          {populated && <View style={styles.safetyFooter}>
+            {nearby?.status === 'ready' && nearby.profiles.map(profile => <NearbySafetyOptions key={profile.user_id}
+              userId={profile.user_id} name={nearby.profiles.length > 1 ? profile.first_name : undefined}
+              onBlocked={() => removeBlockedProfile(profile.user_id)} />)}
+          </View>}
         </ScrollView>
 
-        {isLooking && actionArea}
+        {isLooking && !showSearchStatus && !populated && actionArea}
       </View>
     </SafeAreaView>
   );
@@ -207,32 +205,25 @@ export default function DiscoveryScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FEFCF8' },
   content: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center', paddingHorizontal: 28 },
-  statusGroup: { width: '100%', alignItems: 'center' },
-  activeDescription: { alignSelf: 'center', maxWidth: 300, fontSize: 15, lineHeight: 22 },
+  statusGroup: { width: '100%', alignItems: 'center', gap: 12 },
   scroll: { flex: 1, minHeight: 0 },
   main: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 12 },
-  badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14,
-    paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#C9CEC7',
-  },
-  inactiveBadge: { borderColor: '#D8D0BC' },
-  inactiveMessage: { alignItems: 'center', gap: 16 },
-  inactiveDescription: { width: '100%', maxWidth: 300 },
+  stateHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#3F6B50', flexShrink: 0 },
   inactiveAction: { width: '100%' },
-  activeBadge: { backgroundColor: '#253D2F', borderColor: '#253D2F' },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#656D66' },
-  activeDot: { backgroundColor: '#FEFCF8' },
-  badgeLabel: { fontSize: 11, letterSpacing: 1, fontWeight: '600', color: '#656D66' },
-  activeLabel: { color: '#FFFFFF' },
-  message: { width: '100%', gap: 12 },
-  statusTitle: { fontWeight: '600', letterSpacing: -0.6, color: '#202D25', textAlign: 'center' },
-  description: { color: '#656D66', textAlign: 'center' },
+  statusTitle: { flexShrink: 1, fontWeight: '600', letterSpacing: -0.6, color: '#202D25', textAlign: 'center' },
+  description: { maxWidth: 300, fontSize: 15, lineHeight: 22, color: '#656D66', textAlign: 'center' },
   nearbySection: { width: '100%', alignItems: 'center', gap: 10 },
   nearbyMessage: { color: '#202D25', fontWeight: '400', fontStyle: 'normal', textAlign: 'center' },
-  nearbyFound: { color: '#253D2F', fontWeight: '600' },
+  nearbyFound: { color: '#253D2F', fontWeight: '600', marginBottom: -6 },
+  safetyFooter: { width: '100%', alignItems: 'center', paddingTop: 16, gap: 8 },
   footer: { flexShrink: 0 },
   previewNote: { fontSize: 12, lineHeight: 18, color: '#656D66', textAlign: 'center' },
-  button: { borderRadius: 16, backgroundColor: '#253D2F', paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
-  buttonLabel: { fontSize: 14, fontWeight: '700', letterSpacing: 1.5, color: '#FFFFFF' },
+  button: { width: 200, maxWidth: '100%', minHeight: 48, alignSelf: 'center', borderRadius: 12, borderWidth: 1, borderColor: '#3F6B50', backgroundColor: 'transparent', paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  buttonLabel: { fontSize: 14, fontWeight: '600', color: '#3F6B50', textAlign: 'center' },
+  stopButton: { borderColor: '#A65F5F' },
+  pairedAction: { width: '100%', minHeight: 48, padding: 14, paddingHorizontal: 14, paddingVertical: 14 },
+  pairedLabel: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  stopLabel: { color: '#A65F5F' },
   pressed: { opacity: 0.7 },
 });

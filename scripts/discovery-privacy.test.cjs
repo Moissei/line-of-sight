@@ -47,6 +47,6 @@ test('card has no distance rendering and retains photo/request/safety wiring', (
   assert.doesNotMatch(card, /distance|meters|m away|__DEV__/i);
   assert.match(card, /<PrimaryPhoto key=\{profile.primaryPhotoUrl \?\? 'placeholder'\} uri=\{profile.primaryPhotoUrl\}/);
   assert.match(card, /cachePolicy="none"/);
-  assert.match(card, /<SafetyActions target=\{\{ kind: 'user', id: profile.user_id \}\} onBlocked=\{onBlocked\}/);
+  assert.match(card, /<SafetyActions target=\{\{ kind: 'user', id: userId \}\} onBlocked=\{onBlocked\}/);
   assert.match(card, /<RequestToConnect key=\{profile.user_id\} targetUserId=\{profile.user_id\} revision=\{profile.requestRevision \?\? 0\}/);
 });

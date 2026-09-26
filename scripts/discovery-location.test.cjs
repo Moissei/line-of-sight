@@ -174,7 +174,7 @@ for (const lifecycle of ['success', 'blur', 'unmount', 'background']) test(`scre
     'expo-status-bar': { StatusBar: 'StatusBar' },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
     '@/lib/discovery-presence': { readDiscoveryPresence: async () => false, presenceErrorMessage: () => 'Error',
-      setDiscoveryPresence(active, pending, signal) { calls++; operationSignal = signal; locationPending = pending; pending(true); return new Promise((resolve, reject) => { confirm = resolve; signal?.addEventListener('abort', () => { pending(false); reject(Error('cancelled')); }); }); } },
+      setDiscoveryPresence(active, pending, signal) { assert.equal(active, calls === 0); calls++; operationSignal = signal; locationPending = pending; pending(true); return new Promise((resolve, reject) => { confirm = resolve; signal?.addEventListener('abort', () => { pending(false); reject(Error('cancelled')); }); }); } },
     '@/lib/nearby-discovery': { pollNearbyDiscovery: () => () => {} },
     '@/components/nearby-profile-card': { NearbyProfileCard: 'Card' },
     '@/components/discovery-brand': { DiscoveryBrand: 'Brand' },
@@ -186,20 +186,22 @@ for (const lifecycle of ['success', 'blur', 'unmount', 'background']) test(`scre
   function nodes(node) { if (!node || typeof node !== 'object') return []; return [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]; }
   const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
   render(); collect = false; const cleanup = effects[0](); await flush(); render();
+  assert.match(JSON.stringify(tree), /You're hidden until you start looking\./);
+  assert.doesNotMatch(JSON.stringify(tree), /SESSION INACTIVE|SESSION ACTIVE|You are discoverable/);
   const press = nodes(tree).find(n => n.type === 'Pressable').props.onPress;
   press(); press(); render();
   assert.equal(calls, 1);
   assert.match(JSON.stringify(tree), /Getting your location…/);
-  assert.match(JSON.stringify(tree), /SESSION INACTIVE/);
+  assert.match(JSON.stringify(tree), /Ready to be seen\?/);
   if (lifecycle !== 'success') {
     if (lifecycle === 'background') onAppState('background'); else cleanup();
     assert.equal(operationSignal.aborted, true); await flush();
     locationPending(true); confirm(true); await flush(); render();
-    assert.doesNotMatch(JSON.stringify(tree), /SESSION ACTIVE/);
+    assert.doesNotMatch(JSON.stringify(tree), /Looking nearby/);
     return;
   }
-  locationPending(false); render(); assert.match(JSON.stringify(tree), /SESSION INACTIVE/);
-  confirm(true); await flush(); render(); assert.match(JSON.stringify(tree), /SESSION ACTIVE/);
+  locationPending(false); render(); assert.match(JSON.stringify(tree), /Ready to be seen\?/);
+  confirm(true); await flush(); render(); assert.match(JSON.stringify(tree), /Looking nearby/);
   assert.doesNotMatch(JSON.stringify(tree), /Getting your location…/);
 });
 
@@ -210,3 +212,21 @@ test('poor updates never re-register watcher; one accepted result activates once
  await p; f.emit(fix()); assert.equal(f.counts().writes,1); assert.equal(f.removals(),1); assert.equal(f.timers(),0);
  assert.doesNotMatch(source,/restartWatch|restartTimer|Watcher refresh/);
 });
+
+ test('Discovery presentation uses compact outlined semantic controls and retains nearby cards', () => {
+  const screen = fs.readFileSync('src/app/(tabs)/discovery.tsx', 'utf8');
+  const jsx = (type, props) => ({ type, props });
+  const compiled = ts.transpileModule(screen + '\nexport { styles };', { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const exports = {};
+  new Function('require', 'exports', compiled)(id => id === 'react-native' ? { StyleSheet: { create: x => x } } : id === 'react/jsx-runtime' ? { jsx, jsxs: jsx } : {}, exports);
+  const { button, buttonLabel, stopButton, stopLabel, stateHeading, dot } = exports.styles;
+  assert.equal(button.backgroundColor, 'transparent'); assert.equal(button.width, 200); assert.equal(button.maxWidth, '100%');
+  assert.ok(button.minHeight >= 44); assert.equal(button.borderWidth, 1); assert.equal(button.borderRadius, 12);
+  assert.equal(button.borderColor, '#3F6B50'); assert.equal(buttonLabel.color, '#3F6B50');
+  assert.deepEqual(stopButton, { borderColor: '#A65F5F' }); assert.deepEqual(stopLabel, { color: '#A65F5F' });
+  assert.equal(stateHeading.borderWidth, undefined); assert.equal(dot.backgroundColor, '#3F6B50');
+  assert.doesNotMatch(screen, /SESSION INACTIVE|SESSION ACTIVE|You are discoverable/);
+  assert.match(screen, /<NearbyProfileCard key={profile.user_id} profile={profile} sessionAction={actionArea} onBlocked={\(\) => removeBlockedProfile\(profile.user_id\)} \/>/);
+  assert.match(screen, /Someone is in your line of sight/);
+  assert.match(screen, /<DiscoveryBrand active={isLooking} fontSize={titleSize} compact={compact}/);
+ });
